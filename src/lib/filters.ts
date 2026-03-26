@@ -6,6 +6,7 @@ export function parseFiltersFromParams(
   return {
     search: typeof searchParams.q === "string" ? searchParams.q : undefined,
     language: typeof searchParams.lang === "string" ? searchParams.lang : undefined,
+    category: typeof searchParams.cat === "string" ? searchParams.cat : undefined,
     tagId: typeof searchParams.tag === "string" ? parseInt(searchParams.tag, 10) : undefined,
     status: parseStatus(searchParams.status),
     sort: parseSort(searchParams.sort),
@@ -37,6 +38,7 @@ export function buildFilterUrl(
 
   if (merged.search) params.set("q", merged.search);
   if (merged.language) params.set("lang", merged.language);
+  if (merged.category) params.set("cat", merged.category);
   if (merged.tagId) params.set("tag", String(merged.tagId));
   if (merged.status && merged.status !== "all") params.set("status", merged.status);
   if (merged.sort && merged.sort !== "starred") params.set("sort", merged.sort);

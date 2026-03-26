@@ -6,6 +6,7 @@ import "@/lib/db/migrate";
 export interface RepoFilters {
   search?: string;
   language?: string;
+  category?: string;
   tagId?: number;
   status?: "all" | "starred" | "cloned" | "running" | "updates";
   sort?: "starred" | "updated" | "stars" | "name";

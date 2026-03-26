@@ -9,11 +9,11 @@ import {
   getFilteredRepos,
   getReposByTag,
   getAllTags,
-  getLanguageCounts,
   getRepoStats,
   getRecentActivity,
   getLastSyncTime,
 } from "@/lib/queries";
+import { getCategoryCounts, getReposByCategory } from "@/lib/categories";
 import { parseFiltersFromParams } from "@/lib/filters";
 import { starredRepos } from "@/lib/db/schema";
 import { db } from "@/lib/db";
@@ -34,12 +34,15 @@ export default async function HomePage({ searchParams }: PageProps) {
   const params = await searchParams;
   const filters = parseFiltersFromParams(params);
 
-  // Fetch all data in parallel
+  // Fetch all data
+  const allRepos = getFilteredRepos({ sort: filters.sort });
   const repos = filters.tagId
     ? getReposByTag(filters.tagId)
+    : filters.category
+    ? getReposByCategory(getFilteredRepos(filters), filters.category)
     : getFilteredRepos(filters);
   const allTags = getAllTags();
-  const languages = getLanguageCounts();
+  const categories = getCategoryCounts(allRepos);
   const stats = getRepoStats();
   const lastSyncTime = getLastSyncTime();
 
@@ -69,7 +72,7 @@ export default async function HomePage({ searchParams }: PageProps) {
           <Sidebar
             filters={filters}
             repoCount={stats.total}
-            languages={languages}
+            categories={categories}
             tags={allTags}
           />
         }

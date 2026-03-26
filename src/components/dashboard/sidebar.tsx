@@ -1,15 +1,16 @@
 import Link from "next/link";
 import type { RepoFilters } from "@/lib/queries";
+import type { CategoryCount } from "@/lib/categories";
 import { buildFilterUrl } from "@/lib/filters";
 
 interface SidebarProps {
   filters: RepoFilters;
   repoCount: number;
-  languages: { language: string | null; count: number }[];
+  categories: CategoryCount[];
   tags: { id: number; name: string; color: string | null }[];
 }
 
-export function Sidebar({ filters, repoCount, languages, tags }: SidebarProps) {
+export function Sidebar({ filters, repoCount, categories, tags }: SidebarProps) {
   return (
     <aside className="w-56 flex-shrink-0 border-r border-gray-800 overflow-y-auto p-4 space-y-6">
       {/* Status Filters */}
@@ -19,28 +20,30 @@ export function Sidebar({ filters, repoCount, languages, tags }: SidebarProps) {
         </h3>
         <nav className="space-y-1">
           <FilterLink
-            href={buildFilterUrl(filters, { status: "all", language: undefined, tagId: undefined })}
+            href={buildFilterUrl(filters, { status: "all", language: undefined, category: undefined, tagId: undefined })}
             active={!filters.status || filters.status === "all"}
             label="All Stars"
             count={repoCount}
+            icon="⭐"
           />
         </nav>
       </div>
 
-      {/* Languages */}
-      {languages.length > 0 && (
+      {/* Categories */}
+      {categories.length > 0 && (
         <div>
           <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
-            Languages
+            Categories
           </h3>
           <nav className="space-y-1">
-            {languages.slice(0, 10).map((lang) => (
+            {categories.map((cat) => (
               <FilterLink
-                key={lang.language}
-                href={buildFilterUrl(filters, { language: lang.language ?? undefined })}
-                active={filters.language === lang.language}
-                label={lang.language ?? "Unknown"}
-                count={lang.count}
+                key={cat.name}
+                href={buildFilterUrl(filters, { category: cat.name, language: undefined })}
+                active={filters.category === cat.name}
+                label={cat.name}
+                count={cat.count}
+                icon={cat.icon}
               />
             ))}
           </nav>
@@ -105,33 +108,38 @@ function FilterLink({
   label,
   count,
   color,
+  icon,
 }: {
   href: string;
   active: boolean;
   label: string;
   count?: number;
   color?: string;
+  icon?: string;
 }) {
   return (
     <Link
       href={href}
       className={`flex items-center justify-between px-2 py-1.5 rounded text-sm transition-colors ${
         active
-          ? "bg-gray-800 text-gray-100"
-          : "text-gray-400 hover:text-gray-200 hover:bg-gray-900"
+          ? "bg-blue-900/30 text-blue-300 border border-blue-800/50"
+          : "text-gray-400 hover:text-gray-200 hover:bg-gray-800/50"
       }`}
     >
-      <span className="flex items-center gap-2">
+      <span className="flex items-center gap-2 truncate">
+        {icon && <span className="flex-shrink-0">{icon}</span>}
         {color && (
           <span
             className="w-2.5 h-2.5 rounded-full flex-shrink-0"
             style={{ backgroundColor: color }}
           />
         )}
-        {label}
+        <span className="truncate">{label}</span>
       </span>
       {count !== undefined && (
-        <span className="text-xs text-gray-600">{count}</span>
+        <span className={`text-xs ml-1 flex-shrink-0 ${active ? "text-blue-400" : "text-gray-600"}`}>
+          {count}
+        </span>
       )}
     </Link>
   );
