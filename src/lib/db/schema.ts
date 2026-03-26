@@ -43,15 +43,19 @@ export const githubLists = sqliteTable("github_lists", {
   syncedAt: text("synced_at"),
 });
 
-export const githubListRepos = sqliteTable("github_list_repos", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
-  listId: integer("list_id")
-    .notNull()
-    .references(() => githubLists.id, { onDelete: "cascade" }),
-  repoId: integer("repo_id")
-    .notNull()
-    .references(() => starredRepos.id, { onDelete: "cascade" }),
-});
+export const githubListRepos = sqliteTable(
+  "github_list_repos",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    listId: integer("list_id")
+      .notNull()
+      .references(() => githubLists.id, { onDelete: "cascade" }),
+    repoId: integer("repo_id")
+      .notNull()
+      .references(() => starredRepos.id, { onDelete: "cascade" }),
+  },
+  (table) => [uniqueIndex("github_list_repos_list_repo_idx").on(table.listId, table.repoId)]
+);
 
 // ─── Tags ────────────────────────────────────────────────
 
@@ -62,15 +66,19 @@ export const tags = sqliteTable("tags", {
   createdAt: text("created_at").default(sql`(datetime('now'))`),
 });
 
-export const repoTags = sqliteTable("repo_tags", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
-  tagId: integer("tag_id")
-    .notNull()
-    .references(() => tags.id, { onDelete: "cascade" }),
-  repoId: integer("repo_id")
-    .notNull()
-    .references(() => starredRepos.id, { onDelete: "cascade" }),
-});
+export const repoTags = sqliteTable(
+  "repo_tags",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    tagId: integer("tag_id")
+      .notNull()
+      .references(() => tags.id, { onDelete: "cascade" }),
+    repoId: integer("repo_id")
+      .notNull()
+      .references(() => starredRepos.id, { onDelete: "cascade" }),
+  },
+  (table) => [uniqueIndex("repo_tags_tag_repo_idx").on(table.tagId, table.repoId)]
+);
 
 // ─── Local State ─────────────────────────────────────────
 
@@ -135,19 +143,23 @@ export const releases = sqliteTable("releases", {
 
 // ─── Security Advisories ─────────────────────────────────
 
-export const securityAdvisories = sqliteTable("security_advisories", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
-  repoId: integer("repo_id")
-    .notNull()
-    .references(() => starredRepos.id, { onDelete: "cascade" }),
-  githubAdvisoryId: text("github_advisory_id").notNull(),
-  severity: text("severity"),
-  summary: text("summary"),
-  description: text("description"),
-  publishedAt: text("published_at"),
-  acknowledged: integer("acknowledged", { mode: "boolean" }).default(false),
-  createdAt: text("created_at").default(sql`(datetime('now'))`),
-});
+export const securityAdvisories = sqliteTable(
+  "security_advisories",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    repoId: integer("repo_id")
+      .notNull()
+      .references(() => starredRepos.id, { onDelete: "cascade" }),
+    githubAdvisoryId: text("github_advisory_id").notNull(),
+    severity: text("severity"),
+    summary: text("summary"),
+    description: text("description"),
+    publishedAt: text("published_at"),
+    acknowledged: integer("acknowledged", { mode: "boolean" }).default(false),
+    createdAt: text("created_at").default(sql`(datetime('now'))`),
+  },
+  (table) => [uniqueIndex("security_advisories_repo_advisory_idx").on(table.repoId, table.githubAdvisoryId)]
+);
 
 // ─── Compatibility Checks ────────────────────────────────
 
