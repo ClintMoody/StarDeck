@@ -1,5 +1,5 @@
 import { db } from "@/lib/db";
-import { starredRepos, tags, repoTags, syncLog, releases, securityAdvisories } from "@/lib/db/schema";
+import { starredRepos, tags, repoTags, syncLog, releases, securityAdvisories, repoNotes } from "@/lib/db/schema";
 import { eq, desc, like, or, and, count, sql, inArray } from "drizzle-orm";
 import "@/lib/db/migrate";
 
@@ -143,4 +143,24 @@ export function getLastSyncTime() {
     .get();
 
   return lastSync?.completedAt ?? null;
+}
+
+export function getRepoNote(repoId: number) {
+  return db
+    .select()
+    .from(repoNotes)
+    .where(eq(repoNotes.repoId, repoId))
+    .get();
+}
+
+export function upsertRepoNote(repoId: number, content: string) {
+  const existing = getRepoNote(repoId);
+  if (existing) {
+    db.update(repoNotes)
+      .set({ content, updatedAt: new Date().toISOString() })
+      .where(eq(repoNotes.repoId, repoId))
+      .run();
+  } else {
+    db.insert(repoNotes).values({ repoId, content }).run();
+  }
 }
