@@ -1,5 +1,5 @@
 import { db } from "@/lib/db";
-import { starredRepos, tags, repoTags, syncLog, releases, securityAdvisories, repoNotes, repoLocalState, recipes } from "@/lib/db/schema";
+import { starredRepos, tags, repoTags, syncLog, releases, securityAdvisories, repoNotes, repoLocalState, recipes, notifications, settings as settingsTable } from "@/lib/db/schema";
 import { eq, desc, like, or, and, count, sql, inArray } from "drizzle-orm";
 import "@/lib/db/migrate";
 
@@ -240,4 +240,78 @@ export function upsertRepoRecipe(repoId: number, data: {
       .values({ repoId, ...data })
       .run();
   }
+}
+
+export function getUnreadNotifications(limit: number = 50) {
+  return db
+    .select()
+    .from(notifications)
+    .where(eq(notifications.read, false))
+    .orderBy(desc(notifications.createdAt))
+    .limit(limit)
+    .all();
+}
+
+export function getAllNotifications(limit: number = 100) {
+  return db
+    .select()
+    .from(notifications)
+    .orderBy(desc(notifications.createdAt))
+    .limit(limit)
+    .all();
+}
+
+export function markNotificationRead(id: number) {
+  db.update(notifications)
+    .set({ read: true })
+    .where(eq(notifications.id, id))
+    .run();
+}
+
+export function markAllNotificationsRead() {
+  db.update(notifications)
+    .set({ read: true })
+    .where(eq(notifications.read, false))
+    .run();
+}
+
+export function createNotification(data: {
+  repoId?: number | null;
+  type: string;
+  title: string;
+  message?: string;
+}) {
+  return db
+    .insert(notifications)
+    .values(data)
+    .returning()
+    .get();
+}
+
+export function getSetting(key: string): string | null {
+  const row = db
+    .select()
+    .from(settingsTable)
+    .where(eq(settingsTable.key, key))
+    .get();
+  return row?.value ?? null;
+}
+
+export function setSetting(key: string, value: string) {
+  const existing = getSetting(key);
+  if (existing !== null) {
+    db.update(settingsTable)
+      .set({ value })
+      .where(eq(settingsTable.key, key))
+      .run();
+  } else {
+    db.insert(settingsTable)
+      .values({ key, value })
+      .run();
+  }
+}
+
+export function getAllSettings(): Record<string, string> {
+  const rows = db.select().from(settingsTable).all();
+  return Object.fromEntries(rows.map((r) => [r.key, r.value]));
 }
