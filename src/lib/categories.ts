@@ -19,107 +19,117 @@ const CATEGORY_DEFINITIONS: CategoryDefinition[] = [
     name: "AI & Agents",
     icon: "🤖",
     keywords: [
-      "ai", "artificial-intelligence", "machine-learning", "ml", "deep-learning",
-      "llm", "large-language-model", "gpt", "claude", "openai", "anthropic",
-      "agent", "agents", "agentic", "ai-agent", "ai-agents", "autonomous",
-      "langchain", "llamaindex", "rag", "embedding", "vector", "neural",
-      "transformer", "diffusion", "generative", "prompt", "chatbot",
+      // Topic-safe (hyphenated terms match topics exactly)
+      "ai-agent", "ai-agents", "ai-tools", "ai-assistant", "ai-security-tool",
+      "agentic-ai", "agentic-engineering", "agentic-framework", "agentic-workflow",
+      "artificial-intelligence", "machine-learning", "deep-learning",
+      "large-language-models", "llm-inference", "multi-agent", "multi-agent-system",
+      "multi-agent-systems", "autonomous-agents", "swarm-intelligence",
+      "langchain", "langgraph", "llamaindex", "anthropic", "anthropic-claude",
+      "claude-code", "claude-skills", "openclaw", "openclaw-skills",
+      "codex", "codex-skills", "openai",
+      // Word-boundary safe for descriptions
+      "llm", "gpt", "claude", "agentic", "embedding", "transformer",
+      "diffusion", "chatbot", "neural", "generative",
+      // Specific to user's repos
+      "model-context-protocol", "mcp-server", "deep-research",
+      "superagent", "swarm", "mlx",
     ],
   },
   {
-    name: "Security & Hacking",
+    name: "Security & OSINT",
     icon: "🔒",
     keywords: [
-      "security", "hacking", "pentest", "penetration-testing", "exploit",
-      "vulnerability", "cve", "ctf", "red-team", "blue-team", "offensive",
-      "defensive", "malware", "reverse-engineering", "forensics", "osint",
-      "recon", "reconnaissance", "bug-bounty", "infosec", "cybersecurity",
-      "encryption", "crypto", "cryptography", "aes", "rsa",
+      "security", "hacking", "pentest", "penetration-testing", "penetration-testing-tools",
+      "exploit", "vulnerability", "cve", "ctf", "red-team", "offensive-security",
+      "defensive", "malware", "reverse-engineering", "forensics",
+      "osint", "osint-tool", "osint-resources",
+      "reconnaissance", "bug-bounty", "infosec", "cybersecurity",
+      "security-automation", "security-testing", "security-tools",
+      "ai-security", "dlp", "ssrf-protection", "egress-proxy",
+      "encryption", "aes-256", "cryptography",
+      // User's specific repos
+      "cctv", "cctv-cameras", "sattelite", "sattelite-imagery",
+      "elonjet", "airforce1",
     ],
   },
   {
     name: "Developer Tools",
     icon: "🛠️",
     keywords: [
-      "developer-tools", "devtools", "cli", "command-line", "terminal",
-      "editor", "ide", "linter", "formatter", "bundler", "compiler",
-      "debugger", "profiler", "testing", "test-framework", "ci-cd",
-      "git", "version-control", "package-manager", "build-tool",
-      "code-quality", "static-analysis", "documentation", "sdk",
+      "developer-tools", "devtools", "command-line", "terminal",
+      "linter", "formatter", "bundler", "compiler",
+      "debugger", "profiler", "test-framework", "ci-cd",
+      "version-control", "package-manager", "build-tool",
+      "code-quality", "static-analysis",
+      // Specific to user's repos
+      "claude-code-plugin", "claude-code-skills",
+      "context-engineering", "meta-prompting", "spec-driven-development",
+      "vibe-coding", "coding",
+      "token-savings", "token",
     ],
   },
   {
-    name: "Web & Frontend",
+    name: "Automation & Browser",
     icon: "🌐",
     keywords: [
-      "web", "frontend", "front-end", "react", "vue", "svelte", "angular",
-      "nextjs", "next-js", "css", "html", "javascript", "typescript",
-      "tailwind", "ui-components", "component-library", "design-system",
-      "responsive", "pwa", "spa", "ssr", "static-site",
+      "automation", "browser-automation", "scraping", "scraper", "crawler",
+      "selenium", "puppeteer", "playwright",
+      "web-scraping", "workflow", "orchestration",
+      "browser-use", "browser-automation",
     ],
   },
   {
-    name: "Backend & Infrastructure",
-    icon: "⚙️",
+    name: "Audio & Music",
+    icon: "🎵",
     keywords: [
-      "backend", "back-end", "server", "api", "rest", "graphql", "grpc",
-      "database", "sql", "nosql", "redis", "postgres", "mongodb",
-      "docker", "kubernetes", "k8s", "devops", "infrastructure", "cloud",
-      "aws", "gcp", "azure", "serverless", "microservices", "nginx",
+      "audio", "audio-analysis", "audio-plugin", "audio-visualizer",
+      "music", "vst", "vst3", "juce", "juce-framework", "juce-plugin",
+      "daw", "synthesizer", "midi", "sound",
+      "spectral", "signal", "spl", "acoustics",
+      "sample", "visualizer",
     ],
   },
   {
-    name: "Data & Visualization",
-    icon: "📊",
-    keywords: [
-      "data", "analytics", "visualization", "dashboard", "chart", "graph",
-      "plotting", "statistics", "data-science", "pandas", "jupyter",
-      "notebook", "dataset", "etl", "pipeline", "streaming", "kafka",
-    ],
-  },
-  {
-    name: "Automation & Scraping",
-    icon: "🤖",
-    keywords: [
-      "automation", "automate", "scraping", "scraper", "crawler", "spider",
-      "browser-automation", "selenium", "puppeteer", "playwright",
-      "web-scraping", "bot", "workflow", "orchestration",
-    ],
-  },
-  {
-    name: "Networking & Protocols",
-    icon: "🔌",
-    keywords: [
-      "networking", "network", "protocol", "tcp", "udp", "http", "websocket",
-      "dns", "proxy", "vpn", "tunnel", "bluetooth", "ble", "wifi",
-      "mesh", "p2p", "peer-to-peer", "mqtt", "socket",
-    ],
-  },
-  {
-    name: "Media & Creative",
-    icon: "🎨",
-    keywords: [
-      "audio", "video", "music", "image", "graphics", "3d", "animation",
-      "game", "gamedev", "opengl", "vulkan", "shader", "rendering",
-      "creative", "art", "design", "photography", "camera",
-    ],
-  },
-  {
-    name: "Knowledge & Research",
+    name: "Knowledge & Memory",
     icon: "📚",
     keywords: [
-      "knowledge", "wiki", "notes", "obsidian", "brain", "memory",
-      "research", "paper", "academic", "education", "learning",
-      "documentation", "reference", "graph", "knowledge-graph",
+      "knowledge", "knowledge-graph", "notes", "obsidian",
+      "brain", "brain-map", "memory", "ai-memory", "memory-system",
+      "memory-layer", "long-term-memory", "memory-engine",
+      "research", "paper", "arxiv", "academic",
+      "personal-knowledge", "personal-knowledge-management",
+      "open-brain",
+    ],
+  },
+  {
+    name: "Geolocation & Maps",
+    icon: "🗺️",
+    keywords: [
+      "geolocation", "gps", "navigation", "maps", "offline-maps",
+      "mgrs", "military-grid", "land-navigation",
+      "street-level", "satellite", "mapping",
+      "tactical", "hiking", "search-and-rescue",
     ],
   },
   {
     name: "Mobile & Desktop",
     icon: "📱",
     keywords: [
-      "mobile", "ios", "android", "swift", "kotlin", "react-native",
-      "flutter", "electron", "tauri", "desktop", "native", "app",
-      "cross-platform",
+      "mobile", "ios", "android", "react-native",
+      "flutter", "electron", "tauri", "desktop",
+      "cross-platform", "dart",
+    ],
+  },
+  {
+    name: "Backend & Infra",
+    icon: "⚙️",
+    keywords: [
+      "backend", "server", "graphql", "grpc",
+      "database", "nosql", "redis", "postgres", "mongodb", "supabase",
+      "docker", "kubernetes", "devops", "infrastructure",
+      "aws", "gcp", "azure", "serverless", "microservices",
+      "self-hosted",
     ],
   },
 ];
@@ -133,6 +143,11 @@ export interface CategoryCount {
 /**
  * Categorize a single repo based on its metadata.
  * A repo can belong to multiple categories.
+ *
+ * Matching strategy:
+ * - Topics are matched exactly (they're already discrete tags)
+ * - Description and name are matched with word boundaries to avoid
+ *   false positives like "ai" matching inside "trail"
  */
 export function categorizeRepo(repo: {
   topics: string | null;
@@ -141,10 +156,12 @@ export function categorizeRepo(repo: {
   language: string | null;
 }): string[] {
   const topics: string[] = repo.topics ? JSON.parse(repo.topics) : [];
-  const searchText = [
-    ...topics,
+  const topicsLower = new Set(topics.map((t) => t.toLowerCase()));
+
+  // For word-boundary matching on free text
+  const freeText = [
     repo.description ?? "",
-    repo.fullName,
+    repo.fullName.replace(/[/\-_]/g, " "),
     repo.language ?? "",
   ]
     .join(" ")
@@ -153,9 +170,19 @@ export function categorizeRepo(repo: {
   const matched: string[] = [];
 
   for (const cat of CATEGORY_DEFINITIONS) {
-    const hasMatch = cat.keywords.some(
-      (kw) => searchText.includes(kw)
-    );
+    const hasMatch = cat.keywords.some((kw) => {
+      // Exact match against topics (most reliable signal)
+      if (topicsLower.has(kw)) return true;
+
+      // Multi-word keywords can use includes on topics
+      if (kw.includes("-") && topics.some((t) => t.toLowerCase().includes(kw))) return true;
+
+      // Word-boundary match on description/name
+      // Use regex to avoid "ai" matching "trail", "app" matching "apple", etc.
+      const re = new RegExp(`\\b${kw.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`, "i");
+      return re.test(freeText);
+    });
+
     if (hasMatch) {
       matched.push(cat.name);
     }
