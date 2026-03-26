@@ -8,9 +8,10 @@ interface SidebarProps {
   repoCount: number;
   categories: CategoryCount[];
   tags: { id: number; name: string; color: string | null }[];
+  archivedCount: number;
 }
 
-export function Sidebar({ filters, repoCount, categories, tags }: SidebarProps) {
+export function Sidebar({ filters, repoCount, categories, tags, archivedCount }: SidebarProps) {
   return (
     <aside className="w-56 flex-shrink-0 border-r border-gray-800 overflow-y-auto p-4 space-y-6">
       {/* Status Filters */}
@@ -25,6 +26,13 @@ export function Sidebar({ filters, repoCount, categories, tags }: SidebarProps) 
             label="All Stars"
             count={repoCount}
             icon="⭐"
+          />
+          <FilterLink
+            href="/?status=archived"
+            active={filters.status === "archived" as any}
+            label="Archived"
+            count={archivedCount}
+            icon="📦"
           />
         </nav>
       </div>

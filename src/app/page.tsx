@@ -12,12 +12,13 @@ import {
   getRepoStats,
   getRecentActivity,
   getLastSyncTime,
+  getArchivedCount,
 } from "@/lib/queries";
 import { getCategoryCounts, getReposByCategory } from "@/lib/categories";
 import { parseFiltersFromParams } from "@/lib/filters";
 import { starredRepos, repoLocalState } from "@/lib/db/schema";
 import { db } from "@/lib/db";
-import { eq } from "drizzle-orm";
+import { eq, desc } from "drizzle-orm";
 import { KeyboardHandler } from "@/components/keyboard-handler";
 
 interface PageProps {
@@ -36,7 +37,9 @@ export default async function HomePage({ searchParams }: PageProps) {
 
   // Fetch all data
   const allRepos = getFilteredRepos({ sort: filters.sort });
-  const repos = filters.tagId
+  const repos = filters.status === "archived"
+    ? db.select().from(starredRepos).where(eq(starredRepos.unstarred, true)).orderBy(desc(starredRepos.updatedAt)).all()
+    : filters.tagId
     ? getReposByTag(filters.tagId)
     : filters.category
     ? getReposByCategory(getFilteredRepos(filters), filters.category)
@@ -44,6 +47,7 @@ export default async function HomePage({ searchParams }: PageProps) {
   const allTags = getAllTags();
   const categories = getCategoryCounts(allRepos);
   const stats = getRepoStats();
+  const archivedCount = getArchivedCount();
   const lastSyncTime = getLastSyncTime();
 
   // Fetch local state for all repos
@@ -78,6 +82,7 @@ export default async function HomePage({ searchParams }: PageProps) {
             repoCount={stats.total}
             categories={categories}
             tags={allTags}
+            archivedCount={archivedCount}
           />
         }
         main={<MainArea repos={repos} localStateMap={Object.fromEntries(localStateMap)} />}

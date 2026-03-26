@@ -8,7 +8,7 @@ export interface RepoFilters {
   language?: string;
   category?: string;
   tagId?: number;
-  status?: "all" | "starred" | "cloned" | "running" | "updates";
+  status?: "all" | "starred" | "cloned" | "running" | "updates" | "archived";
   sort?: "starred" | "updated" | "stars" | "name";
 }
 
@@ -314,4 +314,13 @@ export function setSetting(key: string, value: string) {
 export function getAllSettings(): Record<string, string> {
   const rows = db.select().from(settingsTable).all();
   return Object.fromEntries(rows.map((r) => [r.key, r.value]));
+}
+
+export function getArchivedCount() {
+  const result = db
+    .select({ count: count() })
+    .from(starredRepos)
+    .where(eq(starredRepos.unstarred, true))
+    .get();
+  return result?.count ?? 0;
 }
