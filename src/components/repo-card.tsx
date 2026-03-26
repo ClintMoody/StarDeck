@@ -24,15 +24,35 @@ const LANGUAGE_COLORS: Record<string, string> = {
   "Jupyter Notebook": "bg-orange-300",
 };
 
-export function RepoCard({ repo, onClick, status }: { repo: Repo; onClick?: () => void; status?: string }) {
+export function RepoCard({ repo, onClick, status, selected, onSelect }: {
+  repo: Repo;
+  onClick?: () => void;
+  status?: string;
+  selected?: boolean;
+  onSelect?: (id: number, checked: boolean) => void;
+}) {
   const topics: string[] = repo.topics ? JSON.parse(repo.topics) : [];
   const langColor = repo.language ? LANGUAGE_COLORS[repo.language] ?? "bg-gray-500" : null;
 
   return (
     <div
-      className="bg-gray-900/80 border border-gray-800 rounded-lg p-4 hover:border-blue-700/50 hover:bg-gray-900 transition-all group cursor-pointer"
+      className={`bg-gray-900/80 border rounded-lg p-4 hover:border-blue-700/50 hover:bg-gray-900 transition-all group cursor-pointer relative ${
+        selected ? "border-blue-600 bg-blue-900/10" : "border-gray-800"
+      } ${onSelect ? "pl-8" : ""}`}
       onClick={onClick}
     >
+      {onSelect && (
+        <div className="absolute top-2 left-2 opacity-0 group-hover:opacity-100 transition-opacity"
+          style={selected ? { opacity: 1 } : {}}
+        >
+          <input
+            type="checkbox"
+            checked={selected ?? false}
+            onChange={(e) => { e.stopPropagation(); onSelect(repo.id, e.target.checked); }}
+            className="w-4 h-4 accent-blue-500"
+          />
+        </div>
+      )}
       <div className="flex items-start justify-between mb-2">
         <div className="min-w-0 flex-1">
           <a

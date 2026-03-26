@@ -9,10 +9,14 @@ export function RepoGrid({
   repos,
   onSelectRepo,
   localStateMap,
+  selectedIds,
+  onSelect,
 }: {
   repos: Repo[];
   onSelectRepo?: (repo: Repo) => void;
   localStateMap?: Record<number, LocalState>;
+  selectedIds?: Set<number>;
+  onSelect?: (id: number, checked: boolean) => void;
 }) {
   if (repos.length === 0) {
     return (
@@ -31,6 +35,8 @@ export function RepoGrid({
           repo={repo}
           onClick={onSelectRepo ? () => onSelectRepo(repo) : undefined}
           status={localStateMap?.[repo.id]?.processStatus ?? undefined}
+          selected={selectedIds?.has(repo.id)}
+          onSelect={onSelect}
         />
       ))}
     </div>
