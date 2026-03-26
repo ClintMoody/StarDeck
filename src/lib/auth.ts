@@ -25,4 +25,19 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       return session;
     },
   },
+  events: {
+    async signIn({ account }) {
+      if (account?.access_token) {
+        const baseUrl = process.env.NEXTAUTH_URL ?? "http://localhost:3000";
+        fetch(`${baseUrl}/api/sync`, {
+          method: "POST",
+          headers: {
+            "x-internal-token": account.access_token,
+          },
+        }).catch(() => {
+          // Non-fatal — user can manually sync
+        });
+      }
+    },
+  },
 });
