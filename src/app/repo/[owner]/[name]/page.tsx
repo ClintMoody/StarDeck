@@ -8,6 +8,8 @@ import { ReadmeView } from "@/components/detail/readme-view";
 import { ReleasesView } from "@/components/detail/releases-view";
 import { NotesEditor } from "@/components/detail/notes-editor";
 import { PlaceholderTab } from "@/components/detail/placeholder-tab";
+import { RecipeEditor } from "@/components/detail/recipe-editor";
+import { LogsView } from "@/components/detail/logs-view";
 import { getRepoByFullName, getRepoReleases } from "@/lib/queries";
 import "@/lib/db/migrate";
 
@@ -44,8 +46,8 @@ export default async function RepoDetailPage({ params, searchParams }: PageProps
       {activeTab === "readme" && <ReadmeView owner={owner} name={name} />}
       {activeTab === "releases" && <ReleasesView releases={getRepoReleases(repo.id)} />}
       {activeTab === "notes" && <NotesEditor repoId={repo.id} />}
-      {activeTab === "logs" && <PlaceholderTab name="Run Logs" />}
-      {activeTab === "recipe" && <PlaceholderTab name="Recipe" />}
+      {activeTab === "logs" && <LogsView owner={owner} name={name} />}
+      {activeTab === "recipe" && <RecipeEditor owner={owner} name={name} />}
     </div>
   );
 }
