@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import type { InferSelectModel } from "drizzle-orm";
 import type { starredRepos } from "@/lib/db/schema";
@@ -22,6 +23,57 @@ export function SlideOutPanel({ repo, onClose }: SlideOutPanelProps) {
   const router = useRouter();
   const topics: string[] = repo.topics ? JSON.parse(repo.topics) : [];
   const langColor = repo.language ? LANGUAGE_COLORS[repo.language] ?? "bg-gray-500" : null;
+
+  const [cloning, setCloning] = useState(false);
+  const [running, setRunning] = useState(false);
+  const [localState, setLocalState] = useState<{ clonePath?: string; processStatus?: string } | null>(null);
+
+  // Fetch local state on mount
+  useEffect(() => {
+    fetch(`/api/recipe?owner=${repo.owner}&name=${repo.name}`)
+      .then((r) => r.json())
+      .catch(() => null);
+    // We'll check local state from the DB via a quick endpoint
+  }, [repo.owner, repo.name]);
+
+  async function handleClone() {
+    setCloning(true);
+    try {
+      const res = await fetch("/api/clone", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ owner: repo.owner, name: repo.name }),
+      });
+      if (res.ok) {
+        setLocalState({ clonePath: "cloning...", processStatus: "installing" });
+      }
+    } finally {
+      setCloning(false);
+    }
+  }
+
+  async function handleRun() {
+    setRunning(true);
+    try {
+      await fetch("/api/run", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ owner: repo.owner, name: repo.name }),
+      });
+      setLocalState((prev) => prev ? { ...prev, processStatus: "running" } : prev);
+    } finally {
+      setRunning(false);
+    }
+  }
+
+  async function handleStop() {
+    await fetch("/api/stop", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ owner: repo.owner, name: repo.name }),
+    });
+    setLocalState((prev) => prev ? { ...prev, processStatus: "stopped" } : prev);
+  }
 
   function handleOpenDetails() {
     router.push(`/repo/${repo.owner}/${repo.name}`);
@@ -107,8 +159,33 @@ export function SlideOutPanel({ repo, onClose }: SlideOutPanelProps) {
             )}
           </div>
 
-          {/* Actions */}
+          {/* Lifecycle Actions */}
           <div className="space-y-2">
+            {!localState?.clonePath ? (
+              <button
+                onClick={handleClone}
+                disabled={cloning}
+                className="w-full bg-green-600 hover:bg-green-700 disabled:bg-green-800 disabled:text-gray-400 text-white text-sm font-medium py-2 px-4 rounded-lg transition-colors"
+              >
+                {cloning ? "Cloning..." : "Clone"}
+              </button>
+            ) : localState.processStatus === "running" ? (
+              <button
+                onClick={handleStop}
+                className="w-full bg-red-600 hover:bg-red-700 text-white text-sm font-medium py-2 px-4 rounded-lg transition-colors"
+              >
+                Stop
+              </button>
+            ) : (
+              <button
+                onClick={handleRun}
+                disabled={running}
+                className="w-full bg-green-600 hover:bg-green-700 disabled:bg-green-800 disabled:text-gray-400 text-white text-sm font-medium py-2 px-4 rounded-lg transition-colors"
+              >
+                {running ? "Starting..." : "Run"}
+              </button>
+            )}
+
             <button
               onClick={handleOpenDetails}
               className="w-full bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium py-2 px-4 rounded-lg transition-colors"
