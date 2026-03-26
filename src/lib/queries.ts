@@ -164,3 +164,20 @@ export function upsertRepoNote(repoId: number, content: string) {
     db.insert(repoNotes).values({ repoId, content }).run();
   }
 }
+
+export function getRepoByFullName(owner: string, name: string) {
+  return db
+    .select()
+    .from(starredRepos)
+    .where(eq(starredRepos.fullName, `${owner}/${name}`))
+    .get();
+}
+
+export function getRepoReleases(repoId: number) {
+  return db
+    .select()
+    .from(releases)
+    .where(eq(releases.repoId, repoId))
+    .orderBy(desc(releases.publishedAt))
+    .all();
+}
