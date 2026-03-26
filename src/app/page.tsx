@@ -18,6 +18,7 @@ import { parseFiltersFromParams } from "@/lib/filters";
 import { starredRepos } from "@/lib/db/schema";
 import { db } from "@/lib/db";
 import { eq } from "drizzle-orm";
+import { KeyboardHandler } from "@/components/keyboard-handler";
 
 interface PageProps {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
@@ -55,23 +56,26 @@ export default async function HomePage({ searchParams }: PageProps) {
   });
 
   return (
-    <DashboardLayout
-      header={
-        <DashboardHeader
-          userName={session.user?.name}
-          lastSyncTime={lastSyncTime}
-        />
-      }
-      sidebar={
-        <Sidebar
-          filters={filters}
-          repoCount={stats.total}
-          languages={languages}
-          tags={allTags}
-        />
-      }
-      main={<RepoGrid repos={repos} />}
-      activityFeed={<ActivityFeed activities={activities} />}
-    />
+    <>
+      <KeyboardHandler />
+      <DashboardLayout
+        header={
+          <DashboardHeader
+            userName={session.user?.name}
+            lastSyncTime={lastSyncTime}
+          />
+        }
+        sidebar={
+          <Sidebar
+            filters={filters}
+            repoCount={stats.total}
+            languages={languages}
+            tags={allTags}
+          />
+        }
+        main={<RepoGrid repos={repos} />}
+        activityFeed={<ActivityFeed activities={activities} />}
+      />
+    </>
   );
 }
