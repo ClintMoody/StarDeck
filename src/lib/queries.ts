@@ -1,5 +1,5 @@
 import { db } from "@/lib/db";
-import { starredRepos, tags, repoTags, syncLog, releases, securityAdvisories, repoNotes } from "@/lib/db/schema";
+import { starredRepos, tags, repoTags, syncLog, releases, securityAdvisories, repoNotes, repoLocalState, recipes } from "@/lib/db/schema";
 import { eq, desc, like, or, and, count, sql, inArray } from "drizzle-orm";
 import "@/lib/db/migrate";
 
@@ -180,4 +180,64 @@ export function getRepoReleases(repoId: number) {
     .where(eq(releases.repoId, repoId))
     .orderBy(desc(releases.publishedAt))
     .all();
+}
+
+export function getRepoLocalState(repoId: number) {
+  return db
+    .select()
+    .from(repoLocalState)
+    .where(eq(repoLocalState.repoId, repoId))
+    .get();
+}
+
+export function upsertRepoLocalState(repoId: number, data: Partial<{
+  clonePath: string;
+  localVersion: string;
+  processStatus: string;
+  processPid: number | null;
+  processPort: number | null;
+  diskUsageBytes: number | null;
+  lastPulledAt: string;
+}>) {
+  const existing = getRepoLocalState(repoId);
+  if (existing) {
+    db.update(repoLocalState)
+      .set({ ...data, updatedAt: new Date().toISOString() })
+      .where(eq(repoLocalState.repoId, repoId))
+      .run();
+  } else {
+    db.insert(repoLocalState)
+      .values({ repoId, ...data })
+      .run();
+  }
+}
+
+export function getRepoRecipe(repoId: number) {
+  return db
+    .select()
+    .from(recipes)
+    .where(eq(recipes.repoId, repoId))
+    .get();
+}
+
+export function upsertRepoRecipe(repoId: number, data: {
+  detectedType: string;
+  installCommand: string | null;
+  runCommand: string | null;
+  envVars?: string;
+  preHooks?: string;
+  postHooks?: string;
+  approved?: boolean;
+}) {
+  const existing = getRepoRecipe(repoId);
+  if (existing) {
+    db.update(recipes)
+      .set({ ...data, updatedAt: new Date().toISOString() })
+      .where(eq(recipes.repoId, repoId))
+      .run();
+  } else {
+    db.insert(recipes)
+      .values({ repoId, ...data })
+      .run();
+  }
 }
