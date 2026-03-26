@@ -1,5 +1,6 @@
 import { SearchInput } from "@/components/search-input";
 import { SyncButton } from "@/components/sync-button";
+import { NotificationBell } from "@/components/notification-bell";
 import { signOut } from "@/lib/auth";
 
 interface HeaderProps {
@@ -17,6 +18,7 @@ export function DashboardHeader({ userName, lastSyncTime }: HeaderProps) {
         <SearchInput />
       </div>
       <div className="flex items-center gap-4">
+        <NotificationBell />
         {syncAgo && (
           <span className="text-xs text-gray-500">
             Synced {syncAgo}
