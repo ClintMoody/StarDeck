@@ -46,7 +46,10 @@ export async function getReadmeHtml(
 
     if (!response.ok) return repo.readmeHtml ?? null;
 
-    const html = await response.text();
+    let html = await response.text();
+
+    // Rewrite relative image/link URLs to point to GitHub raw content
+    html = rewriteRelativeUrls(html, owner, name);
 
     // Cache in database
     db.update(starredRepos)
@@ -62,4 +65,27 @@ export async function getReadmeHtml(
     // Return stale cache on error
     return repo.readmeHtml ?? null;
   }
+}
+
+/**
+ * Rewrite relative URLs in GitHub-rendered HTML to absolute GitHub URLs.
+ * Handles both raw content (images) and blob URLs (links to files).
+ */
+function rewriteRelativeUrls(html: string, owner: string, name: string): string {
+  const rawBase = `https://raw.githubusercontent.com/${owner}/${name}/HEAD/`;
+  const blobBase = `https://github.com/${owner}/${name}/blob/HEAD/`;
+
+  // Rewrite relative src attributes (images, videos)
+  html = html.replace(
+    /(<img[^>]+src=["'])(?!https?:\/\/|data:)([^"']+)(["'])/gi,
+    (_, before, url, after) => `${before}${rawBase}${url.replace(/^\.\//, "")}${after}`
+  );
+
+  // Rewrite relative href on anchors that point to files (not #anchors)
+  html = html.replace(
+    /(<a[^>]+href=["'])(?!https?:\/\/|#|mailto:)([^"']+)(["'])/gi,
+    (_, before, url, after) => `${before}${blobBase}${url.replace(/^\.\//, "")}${after}`
+  );
+
+  return html;
 }
