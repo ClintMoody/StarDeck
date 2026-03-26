@@ -1,15 +1,18 @@
 import type { InferSelectModel } from "drizzle-orm";
-import type { starredRepos } from "@/lib/db/schema";
+import type { starredRepos, repoLocalState } from "@/lib/db/schema";
 import { RepoCard } from "./repo-card";
 
 type Repo = InferSelectModel<typeof starredRepos>;
+type LocalState = InferSelectModel<typeof repoLocalState>;
 
 export function RepoGrid({
   repos,
   onSelectRepo,
+  localStateMap,
 }: {
   repos: Repo[];
   onSelectRepo?: (repo: Repo) => void;
+  localStateMap?: Record<number, LocalState>;
 }) {
   if (repos.length === 0) {
     return (
@@ -27,6 +30,7 @@ export function RepoGrid({
           key={repo.id}
           repo={repo}
           onClick={onSelectRepo ? () => onSelectRepo(repo) : undefined}
+          status={localStateMap?.[repo.id]?.processStatus ?? undefined}
         />
       ))}
     </div>

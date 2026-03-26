@@ -15,7 +15,7 @@ import {
 } from "@/lib/queries";
 import { getCategoryCounts, getReposByCategory } from "@/lib/categories";
 import { parseFiltersFromParams } from "@/lib/filters";
-import { starredRepos } from "@/lib/db/schema";
+import { starredRepos, repoLocalState } from "@/lib/db/schema";
 import { db } from "@/lib/db";
 import { eq } from "drizzle-orm";
 import { KeyboardHandler } from "@/components/keyboard-handler";
@@ -45,6 +45,10 @@ export default async function HomePage({ searchParams }: PageProps) {
   const categories = getCategoryCounts(allRepos);
   const stats = getRepoStats();
   const lastSyncTime = getLastSyncTime();
+
+  // Fetch local state for all repos
+  const allLocalState = db.select().from(repoLocalState).all();
+  const localStateMap = new Map(allLocalState.map((ls) => [ls.repoId, ls]));
 
   // Get activity with repo names
   const rawActivity = getRecentActivity();
@@ -76,7 +80,7 @@ export default async function HomePage({ searchParams }: PageProps) {
             tags={allTags}
           />
         }
-        main={<MainArea repos={repos} />}
+        main={<MainArea repos={repos} localStateMap={Object.fromEntries(localStateMap)} />}
         activityFeed={<ActivityFeed activities={activities} />}
       />
     </>

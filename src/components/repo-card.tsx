@@ -24,7 +24,7 @@ const LANGUAGE_COLORS: Record<string, string> = {
   "Jupyter Notebook": "bg-orange-300",
 };
 
-export function RepoCard({ repo, onClick }: { repo: Repo; onClick?: () => void }) {
+export function RepoCard({ repo, onClick, status }: { repo: Repo; onClick?: () => void; status?: string }) {
   const topics: string[] = repo.topics ? JSON.parse(repo.topics) : [];
   const langColor = repo.language ? LANGUAGE_COLORS[repo.language] ?? "bg-gray-500" : null;
 
@@ -48,6 +48,19 @@ export function RepoCard({ repo, onClick }: { repo: Repo; onClick?: () => void }
           <span className="flex items-center gap-1.5 text-xs text-gray-300 bg-gray-800/80 px-2 py-0.5 rounded-full ml-2 flex-shrink-0">
             {langColor && <span className={`w-2 h-2 rounded-full ${langColor}`} />}
             {repo.language}
+          </span>
+        )}
+        {status && status !== "stopped" && (
+          <span className={`text-xs px-2 py-0.5 rounded-full ml-1 flex-shrink-0 ${
+            status === "running" ? "bg-green-900/40 text-green-400" :
+            status === "installing" ? "bg-blue-900/40 text-blue-400" :
+            status === "error" ? "bg-red-900/40 text-red-400" :
+            "bg-gray-800 text-gray-400"
+          }`}>
+            {status === "running" ? "● Running" :
+             status === "installing" ? "● Installing" :
+             status === "error" ? "● Error" :
+             status}
           </span>
         )}
       </div>
