@@ -1,58 +1,77 @@
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
-import { db } from "@/lib/db";
-import { starredRepos } from "@/lib/db/schema";
-import { eq, desc } from "drizzle-orm";
+import { DashboardLayout } from "@/components/dashboard/layout";
+import { DashboardHeader } from "@/components/dashboard/header";
+import { Sidebar } from "@/components/dashboard/sidebar";
+import { ActivityFeed } from "@/components/dashboard/activity-feed";
 import { RepoGrid } from "@/components/repo-grid";
-import { SyncButton } from "@/components/sync-button";
-import { signOut } from "@/lib/auth";
-import "@/lib/db/migrate";
+import {
+  getFilteredRepos,
+  getReposByTag,
+  getAllTags,
+  getLanguageCounts,
+  getRepoStats,
+  getRecentActivity,
+  getLastSyncTime,
+} from "@/lib/queries";
+import { parseFiltersFromParams } from "@/lib/filters";
+import { starredRepos } from "@/lib/db/schema";
+import { db } from "@/lib/db";
+import { eq } from "drizzle-orm";
 
-export default async function HomePage() {
+interface PageProps {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}
+
+export default async function HomePage({ searchParams }: PageProps) {
   const session = await auth();
 
   if (!session) {
     redirect("/login");
   }
 
-  const repos = db
-    .select()
-    .from(starredRepos)
-    .where(eq(starredRepos.unstarred, false))
-    .orderBy(desc(starredRepos.starredAt))
-    .all();
+  const params = await searchParams;
+  const filters = parseFiltersFromParams(params);
+
+  // Fetch all data in parallel
+  const repos = filters.tagId
+    ? getReposByTag(filters.tagId)
+    : getFilteredRepos(filters);
+  const allTags = getAllTags();
+  const languages = getLanguageCounts();
+  const stats = getRepoStats();
+  const lastSyncTime = getLastSyncTime();
+
+  // Get activity with repo names
+  const rawActivity = getRecentActivity();
+  const activities = rawActivity.map((item) => {
+    const repo = item.repoId
+      ? db.select().from(starredRepos).where(eq(starredRepos.id, item.repoId)).get()
+      : null;
+    return {
+      ...item,
+      repoName: repo?.fullName ?? "Unknown repo",
+    };
+  });
 
   return (
-    <div className="p-8 max-w-7xl mx-auto">
-      <div className="flex items-center justify-between mb-8">
-        <div>
-          <h1 className="text-2xl font-bold">StarDeck</h1>
-          <p className="text-sm text-gray-400">
-            {repos.length} starred repos
-          </p>
-        </div>
-        <div className="flex items-center gap-4">
-          <SyncButton />
-          <div className="text-sm text-gray-400">
-            {session.user?.name}
-          </div>
-          <form
-            action={async () => {
-              "use server";
-              await signOut({ redirectTo: "/login" });
-            }}
-          >
-            <button
-              type="submit"
-              className="text-sm text-gray-500 hover:text-gray-300"
-            >
-              Sign out
-            </button>
-          </form>
-        </div>
-      </div>
-
-      <RepoGrid repos={repos} />
-    </div>
+    <DashboardLayout
+      header={
+        <DashboardHeader
+          userName={session.user?.name}
+          lastSyncTime={lastSyncTime}
+        />
+      }
+      sidebar={
+        <Sidebar
+          filters={filters}
+          repoCount={stats.total}
+          languages={languages}
+          tags={allTags}
+        />
+      }
+      main={<RepoGrid repos={repos} />}
+      activityFeed={<ActivityFeed activities={activities} />}
+    />
   );
 }
