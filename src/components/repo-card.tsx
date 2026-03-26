@@ -24,12 +24,15 @@ const LANGUAGE_COLORS: Record<string, string> = {
   "Jupyter Notebook": "bg-orange-300",
 };
 
-export function RepoCard({ repo }: { repo: Repo }) {
+export function RepoCard({ repo, onClick }: { repo: Repo; onClick?: () => void }) {
   const topics: string[] = repo.topics ? JSON.parse(repo.topics) : [];
   const langColor = repo.language ? LANGUAGE_COLORS[repo.language] ?? "bg-gray-500" : null;
 
   return (
-    <div className="bg-gray-900/80 border border-gray-800 rounded-lg p-4 hover:border-blue-700/50 hover:bg-gray-900 transition-all group">
+    <div
+      className="bg-gray-900/80 border border-gray-800 rounded-lg p-4 hover:border-blue-700/50 hover:bg-gray-900 transition-all group cursor-pointer"
+      onClick={onClick}
+    >
       <div className="flex items-start justify-between mb-2">
         <div className="min-w-0 flex-1">
           <a

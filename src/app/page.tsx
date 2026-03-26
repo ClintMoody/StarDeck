@@ -4,7 +4,7 @@ import { DashboardLayout } from "@/components/dashboard/layout";
 import { DashboardHeader } from "@/components/dashboard/header";
 import { Sidebar } from "@/components/dashboard/sidebar";
 import { ActivityFeed } from "@/components/dashboard/activity-feed";
-import { RepoGrid } from "@/components/repo-grid";
+import { MainArea } from "@/components/dashboard/main-area";
 import {
   getFilteredRepos,
   getReposByTag,
@@ -76,7 +76,7 @@ export default async function HomePage({ searchParams }: PageProps) {
             tags={allTags}
           />
         }
-        main={<RepoGrid repos={repos} />}
+        main={<MainArea repos={repos} />}
         activityFeed={<ActivityFeed activities={activities} />}
       />
     </>
