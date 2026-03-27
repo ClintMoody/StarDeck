@@ -51,3 +51,4 @@ next-env.d.ts
 
 # StarDeck
 stardeck-repos/
+.superpowers/
