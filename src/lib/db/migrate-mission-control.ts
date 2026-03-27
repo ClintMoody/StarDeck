@@ -1,13 +1,6 @@
-import Database from 'better-sqlite3';
-import path from 'path';
+import type Database from 'better-sqlite3';
 
-const DB_PATH = path.join(process.cwd(), 'stardeck.db');
-
-export function migrateMissionControl() {
-  const db = new Database(DB_PATH);
-  db.pragma('journal_mode = WAL');
-  db.pragma('foreign_keys = ON');
-
+export function migrateMissionControl(db: Database.Database) {
   db.transaction(() => {
     // Add columns to starredRepos (ignore if already exist)
     const starredCols = db.prepare(
@@ -101,6 +94,4 @@ export function migrateMissionControl() {
       insertView.run('Space Hogs', JSON.stringify({ localStatus: 'downloaded', sort: 'disk_desc' }));
     }
   })();
-
-  db.close();
 }

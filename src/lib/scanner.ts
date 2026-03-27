@@ -121,7 +121,7 @@ export function getGitInfo(repoPath: string): ScanResult {
 export function matchScanResults(
   scanResults: ScanResult[],
   starredRepos: { id: number; fullName: string }[],
-  existingClonePaths: string[]
+  existingClonePaths: Set<string> | string[]
 ): MatchResult {
   // Build lookup map: lowercase fullName → starred repo
   const starredMap = new Map<string, { id: number; fullName: string }>();

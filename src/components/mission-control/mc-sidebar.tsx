@@ -21,7 +21,7 @@ interface SavedView {
 interface Tag {
   id: number;
   name: string;
-  color: string;
+  color: string | null;
 }
 
 interface MCSidebarProps {
@@ -182,7 +182,7 @@ export function MCSidebar({ collections, savedViews, tags, activeFilters }: MCSi
                 activeFilters.tagId === tag.id ? 'text-[#c9d1d9] bg-[#1f6feb22]' : 'text-[#8b949e] hover:text-[#c9d1d9]'
               }`}
             >
-              <span style={{ color: tag.color }}>●</span> {tag.name}
+              <span style={{ color: tag.color ?? undefined }}>●</span> {tag.name}
             </button>
           ))}
         </div>
