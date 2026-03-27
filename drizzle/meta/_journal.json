@@ -15,6 +15,13 @@
       "when": 1774485219965,
       "tag": "0001_loose_valeria_richards",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1774637064071,
+      "tag": "0002_easy_doctor_spectrum",
+      "breakpoints": true
     }
   ]
 }
