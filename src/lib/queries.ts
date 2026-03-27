@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
-import { starredRepos, tags, repoTags, syncLog, releases, securityAdvisories, repoNotes, repoLocalState, recipes, notifications, settings as settingsTable } from "@/lib/db/schema";
-import { eq, desc, like, or, and, count, sql, inArray } from "drizzle-orm";
+import { starredRepos, tags, repoTags, syncLog, releases, securityAdvisories, repoNotes, repoLocalState, recipes, notifications, settings as settingsTable, collections, collectionRepos, scanDirectories, repoActivity, savedViews } from "@/lib/db/schema";
+import { eq, desc, asc, like, or, and, count, sql, inArray } from "drizzle-orm";
+import type { SQL } from "drizzle-orm";
 import "@/lib/db/migrate";
 
 export interface RepoFilters {
@@ -192,12 +193,13 @@ export function getRepoLocalState(repoId: number) {
 
 export function upsertRepoLocalState(repoId: number, data: Partial<{
   clonePath: string;
-  localVersion: string;
+  localVersion: string | null;
+  localTag: string | null;
   processStatus: string;
   processPid: number | null;
   processPort: number | null;
   diskUsageBytes: number | null;
-  lastPulledAt: string;
+  lastPulledAt: string | null;
 }>) {
   const existing = getRepoLocalState(repoId);
   if (existing) {
@@ -323,4 +325,206 @@ export function getArchivedCount() {
     .where(eq(starredRepos.unstarred, true))
     .get();
   return result?.count ?? 0;
+}
+
+// ---- Mission Control Queries ----
+
+export interface MissionControlFilters {
+  stage?: string;
+  search?: string;
+  watchLevel?: string;
+  collectionId?: number;
+  localStatus?: string;
+  sort?: string;
+  tagId?: number;
+}
+
+export function getMissionControlRepos(filters: MissionControlFilters = {}) {
+  let query = db.select({
+    repo: starredRepos,
+    localState: repoLocalState,
+  })
+  .from(starredRepos)
+  .leftJoin(repoLocalState, eq(repoLocalState.repoId, starredRepos.id))
+  .$dynamic();
+
+  if (filters.stage) {
+    query = query.where(eq(starredRepos.workflowStage, filters.stage));
+  }
+  if (filters.watchLevel) {
+    query = query.where(eq(starredRepos.watchLevel, filters.watchLevel));
+  }
+  if (filters.search) {
+    const term = `%${filters.search}%`;
+    query = query.where(
+      or(
+        like(starredRepos.fullName, term),
+        like(starredRepos.description, term),
+        like(starredRepos.topics, term),
+      )!
+    );
+  }
+  if (filters.collectionId) {
+    const repoIds = db.select({ repoId: collectionRepos.repoId })
+      .from(collectionRepos)
+      .where(eq(collectionRepos.collectionId, filters.collectionId));
+    query = query.where(inArray(starredRepos.id, repoIds));
+  }
+  if (filters.tagId) {
+    const repoIds = db.select({ repoId: repoTags.repoId })
+      .from(repoTags)
+      .where(eq(repoTags.tagId, filters.tagId));
+    query = query.where(inArray(starredRepos.id, repoIds));
+  }
+
+  // Sort
+  switch (filters.sort) {
+    case 'stars_desc':
+      query = query.orderBy(desc(starredRepos.starCount));
+      break;
+    case 'name_asc':
+      query = query.orderBy(starredRepos.fullName);
+      break;
+    case 'starred_desc':
+      query = query.orderBy(desc(starredRepos.starredAt));
+      break;
+    case 'disk_desc':
+      query = query.orderBy(desc(repoLocalState.diskUsageBytes));
+      break;
+    case 'activity_desc':
+    default:
+      query = query.orderBy(desc(starredRepos.lastCommitAt));
+      break;
+  }
+
+  return query.all();
+}
+
+export function getStageCounts() {
+  return db.select({
+    stage: starredRepos.workflowStage,
+    count: count(),
+  })
+  .from(starredRepos)
+  .groupBy(starredRepos.workflowStage)
+  .all();
+}
+
+export function updateWorkflowStage(repoIds: number[], stage: string) {
+  return db.update(starredRepos)
+    .set({ workflowStage: stage })
+    .where(inArray(starredRepos.id, repoIds))
+    .run();
+}
+
+export function updateWatchLevel(repoIds: number[], level: string) {
+  return db.update(starredRepos)
+    .set({ watchLevel: level })
+    .where(inArray(starredRepos.id, repoIds))
+    .run();
+}
+
+// ---- Collection Queries ----
+
+export function getAllCollections() {
+  return db.select().from(collections).all();
+}
+
+export function createCollection(name: string, color: string, autoRules?: string) {
+  return db.insert(collections).values({ name, color, autoRules }).run();
+}
+
+export function updateCollection(id: number, data: { name?: string; color?: string; autoRules?: string }) {
+  return db.update(collections).set(data).where(eq(collections.id, id)).run();
+}
+
+export function deleteCollection(id: number) {
+  return db.delete(collections).where(eq(collections.id, id)).run();
+}
+
+export function getCollectionRepoIds(collectionId: number) {
+  return db.select({ repoId: collectionRepos.repoId })
+    .from(collectionRepos)
+    .where(eq(collectionRepos.collectionId, collectionId))
+    .all()
+    .map(r => r.repoId);
+}
+
+export function addReposToCollection(collectionId: number, repoIds: number[]) {
+  const values = repoIds.map(repoId => ({ collectionId, repoId }));
+  return db.insert(collectionRepos).values(values).onConflictDoNothing().run();
+}
+
+export function removeRepoFromCollection(collectionId: number, repoId: number) {
+  return db.delete(collectionRepos)
+    .where(and(
+      eq(collectionRepos.collectionId, collectionId),
+      eq(collectionRepos.repoId, repoId),
+    ))
+    .run();
+}
+
+export function getCollectionCounts() {
+  return db.select({
+    collectionId: collectionRepos.collectionId,
+    count: count(),
+  })
+  .from(collectionRepos)
+  .groupBy(collectionRepos.collectionId)
+  .all();
+}
+
+// ---- Scan Directory Queries ----
+
+export function getAllScanDirectories() {
+  return db.select().from(scanDirectories).all();
+}
+
+export function addScanDirectory(dirPath: string, recursive: boolean) {
+  return db.insert(scanDirectories).values({ path: dirPath, recursive }).run();
+}
+
+export function removeScanDirectory(id: number) {
+  return db.delete(scanDirectories).where(eq(scanDirectories.id, id)).run();
+}
+
+export function updateScanDirectoryTimestamp(id: number) {
+  return db.update(scanDirectories)
+    .set({ lastScannedAt: new Date().toISOString() })
+    .where(eq(scanDirectories.id, id))
+    .run();
+}
+
+// ---- Saved Views Queries ----
+
+export function getAllSavedViews() {
+  return db.select().from(savedViews).all();
+}
+
+export function createSavedView(name: string, filters: string) {
+  return db.insert(savedViews).values({ name, filters }).run();
+}
+
+export function updateSavedView(id: number, data: { name?: string; filters?: string }) {
+  return db.update(savedViews).set(data).where(eq(savedViews.id, id)).run();
+}
+
+export function deleteSavedView(id: number) {
+  return db.delete(savedViews)
+    .where(and(eq(savedViews.id, id), eq(savedViews.builtIn, false)))
+    .run();
+}
+
+// ---- Repo Activity Queries ----
+
+export function getRepoActivityFeed(repoId: number, limit = 50) {
+  return db.select().from(repoActivity)
+    .where(eq(repoActivity.repoId, repoId))
+    .orderBy(desc(repoActivity.createdAt))
+    .limit(limit)
+    .all();
+}
+
+export function insertRepoActivity(repoId: number, type: string, summary: string, data?: string, externalUrl?: string) {
+  return db.insert(repoActivity).values({ repoId, type, summary, data, externalUrl }).run();
 }
