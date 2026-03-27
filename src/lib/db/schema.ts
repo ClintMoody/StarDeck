@@ -1,4 +1,4 @@
-import { sqliteTable, text, integer, real, uniqueIndex } from "drizzle-orm/sqlite-core";
+import { sqliteTable, text, integer, real, uniqueIndex, primaryKey } from "drizzle-orm/sqlite-core";
 import { sql } from "drizzle-orm";
 
 // ─── Starred Repos ───────────────────────────────────────
@@ -29,6 +29,8 @@ export const starredRepos = sqliteTable(
     readmeUpdatedAt: text("readme_updated_at"),
     createdAt: text("created_at").default(sql`(datetime('now'))`),
     updatedAt: text("updated_at").default(sql`(datetime('now'))`),
+    workflowStage: text('workflow_stage').notNull().default('watching'),
+    watchLevel: text('watch_level').notNull().default('releases_only'),
   },
   (table) => [uniqueIndex("starred_repos_github_id_idx").on(table.githubId)]
 );
@@ -98,6 +100,7 @@ export const repoLocalState = sqliteTable(
     processStartedAt: text("process_started_at"),
     diskUsageBytes: integer("disk_usage_bytes"),
     lastPulledAt: text("last_pulled_at"),
+    localTag: text('local_tag'),
     createdAt: text("created_at").default(sql`(datetime('now'))`),
     updatedAt: text("updated_at").default(sql`(datetime('now'))`),
   },
@@ -221,4 +224,53 @@ export const syncLog = sqliteTable("sync_log", {
   errorMessage: text("error_message"),
   apiCallsUsed: integer("api_calls_used").default(0),
   completedAt: text("completed_at").default(sql`(datetime('now'))`),
+});
+
+// ─── Collections ────────────────────────────────────────
+
+export const collections = sqliteTable('collections', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  name: text('name').notNull(),
+  color: text('color').notNull().default('#8b949e'),
+  autoRules: text('auto_rules'), // JSON: { topics?: string[], languages?: string[], keywords?: string[] }
+  createdAt: text('created_at').notNull().default(sql`(datetime('now'))`),
+});
+
+export const collectionRepos = sqliteTable('collection_repos', {
+  collectionId: integer('collection_id').notNull().references(() => collections.id, { onDelete: 'cascade' }),
+  repoId: integer('repo_id').notNull().references(() => starredRepos.id, { onDelete: 'cascade' }),
+}, (table) => [
+  primaryKey({ columns: [table.collectionId, table.repoId] }),
+]);
+
+// ─── Scan Directories ───────────────────────────────────
+
+export const scanDirectories = sqliteTable('scan_directories', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  path: text('path').notNull().unique(),
+  recursive: integer('recursive', { mode: 'boolean' }).notNull().default(true),
+  enabled: integer('enabled', { mode: 'boolean' }).notNull().default(true),
+  lastScannedAt: text('last_scanned_at'),
+});
+
+// ─── Repo Activity ──────────────────────────────────────
+
+export const repoActivity = sqliteTable('repo_activity', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  repoId: integer('repo_id').notNull().references(() => starredRepos.id, { onDelete: 'cascade' }),
+  type: text('type').notNull(), // 'commit_summary' | 'issue' | 'pull_request' | 'release' | 'fork' | 'star_milestone'
+  summary: text('summary').notNull(),
+  data: text('data'), // JSON with type-specific details
+  externalUrl: text('external_url'),
+  createdAt: text('created_at').notNull().default(sql`(datetime('now'))`),
+});
+
+// ─── Saved Views ────────────────────────────────────────
+
+export const savedViews = sqliteTable('saved_views', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  name: text('name').notNull(),
+  filters: text('filters').notNull(), // JSON: { stage?, collection?, watchLevel?, sort?, search?, tags? }
+  builtIn: integer('built_in', { mode: 'boolean' }).notNull().default(false),
+  createdAt: text('created_at').notNull().default(sql`(datetime('now'))`),
 });
