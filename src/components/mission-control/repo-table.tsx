@@ -28,14 +28,15 @@ const SORT_OPTIONS = [
 
 const DEFAULT_COLUMNS = [
   { key: 'checkbox', label: '', width: 28, minWidth: 28, resizable: false },
-  { key: 'repo', label: 'Repository', width: 280, minWidth: 150, resizable: true },
+  { key: 'repo', label: 'Repository', width: 250, minWidth: 150, resizable: true },
   { key: 'stage', label: 'Stage', width: 120, minWidth: 80, resizable: true },
-  { key: 'local', label: 'Local', width: 110, minWidth: 80, resizable: true },
-  { key: 'version', label: 'Version', width: 140, minWidth: 80, resizable: true },
-  { key: 'activity', label: 'Activity', width: 90, minWidth: 60, resizable: true },
-  { key: 'stars', label: 'Stars', width: 80, minWidth: 50, resizable: true },
-  { key: 'disk', label: 'Disk', width: 70, minWidth: 50, resizable: true },
-  { key: 'actions', label: 'Actions', width: 170, minWidth: 100, resizable: true },
+  { key: 'watch', label: 'Watch', width: 140, minWidth: 100, resizable: true },
+  { key: 'local', label: 'Local', width: 100, minWidth: 80, resizable: true },
+  { key: 'version', label: 'Version', width: 130, minWidth: 80, resizable: true },
+  { key: 'activity', label: 'Activity', width: 80, minWidth: 60, resizable: true },
+  { key: 'stars', label: 'Stars', width: 70, minWidth: 50, resizable: true },
+  { key: 'disk', label: 'Disk', width: 60, minWidth: 50, resizable: true },
+  { key: 'actions', label: 'Actions', width: 140, minWidth: 100, resizable: true },
 ];
 
 const EMPTY_STATE_MESSAGES: Record<string, { title: string; hint: string }> = {

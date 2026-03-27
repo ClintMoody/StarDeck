@@ -17,8 +17,9 @@ export async function GET(request: NextRequest) {
     return new Response("Missing params", { status: 400 });
   }
 
-  const repo = getRepoByFullName(owner, name);
-  if (!repo) return new Response("Not found", { status: 404 });
+  const repoResult = getRepoByFullName(owner, name);
+  if (!repoResult) return new Response("Not found", { status: 404 });
+  const repo = repoResult;
 
   const encoder = new TextEncoder();
   const stream = new ReadableStream({

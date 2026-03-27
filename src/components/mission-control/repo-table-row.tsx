@@ -2,6 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { StageDropdown } from './stage-dropdown';
+import { WatchLevelDropdown } from './watch-level-dropdown';
 import { OverflowMenu } from './overflow-menu';
 
 interface RepoRowData {
@@ -34,11 +35,6 @@ interface RepoTableRowProps {
   gridTemplate: string;
 }
 
-const WATCH_ICONS: Record<string, string> = {
-  releases_only: '🔕',
-  active_tracking: '📡',
-  full_watch: '📺',
-};
 
 export function RepoTableRow({ data, selected, onSelect, onOpenDetail, gridTemplate }: RepoTableRowProps) {
   const { repo, localState } = data;
@@ -160,15 +156,14 @@ export function RepoTableRow({ data, selected, onSelect, onOpenDetail, gridTempl
         >
           {repo.fullName}
         </button>
-        {repo.watchLevel !== 'releases_only' && (
-          <span className="text-[10px] text-[#8b949e] block truncate">
-            {WATCH_ICONS[repo.watchLevel] || ''} {repo.watchLevel.replace(/_/g, ' ')}
-          </span>
-        )}
       </div>
 
       <div className="py-2">
         <StageDropdown repoId={repo.id} currentStage={repo.workflowStage} />
+      </div>
+
+      <div className="py-2">
+        <WatchLevelDropdown repoId={repo.id} currentLevel={repo.watchLevel} />
       </div>
 
       <div className="py-2 text-[11px]" style={{ color: localStatusColor }}>
@@ -222,8 +217,6 @@ export function RepoTableRow({ data, selected, onSelect, onOpenDetail, gridTempl
           owner={repo.owner}
           name={repo.name}
           fullName={repo.fullName}
-          currentStage={repo.workflowStage}
-          currentWatchLevel={repo.watchLevel}
           isCloned={isCloned}
         />
       </div>
