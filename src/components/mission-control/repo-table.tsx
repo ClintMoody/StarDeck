@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { RepoTableRow } from './repo-table-row';
 import { BulkActionBar } from './bulk-action-bar';
@@ -15,6 +15,7 @@ interface RepoTableProps {
   repos: RepoData[];
   filters: MissionControlFilters;
   totalCount: number;
+  activeStage: string | null;
 }
 
 const SORT_OPTIONS = [
@@ -25,11 +26,32 @@ const SORT_OPTIONS = [
   { key: 'disk_desc', label: 'Disk Usage' },
 ];
 
-export function RepoTable({ repos, filters, totalCount }: RepoTableProps) {
+const DEFAULT_COLUMNS = [
+  { key: 'checkbox', label: '', width: 28, minWidth: 28, resizable: false },
+  { key: 'repo', label: 'Repository', width: 280, minWidth: 150, resizable: true },
+  { key: 'stage', label: 'Stage', width: 120, minWidth: 80, resizable: true },
+  { key: 'local', label: 'Local', width: 110, minWidth: 80, resizable: true },
+  { key: 'version', label: 'Version', width: 140, minWidth: 80, resizable: true },
+  { key: 'activity', label: 'Activity', width: 90, minWidth: 60, resizable: true },
+  { key: 'stars', label: 'Stars', width: 80, minWidth: 50, resizable: true },
+  { key: 'disk', label: 'Disk', width: 70, minWidth: 50, resizable: true },
+  { key: 'actions', label: 'Actions', width: 170, minWidth: 100, resizable: true },
+];
+
+const EMPTY_STATE_MESSAGES: Record<string, { title: string; hint: string }> = {
+  want_to_try: { title: 'No repos queued to try', hint: 'Change a repo\'s stage to "Want to Try" to queue it here.' },
+  downloaded: { title: 'No downloaded repos', hint: 'Clone a repo or scan your directories to find local copies.' },
+  active: { title: 'No active projects', hint: 'Run a downloaded repo to move it here automatically.' },
+  archived: { title: 'No archived repos', hint: 'Move repos here when you\'re done with them.' },
+};
+
+export function RepoTable({ repos, filters, totalCount, activeStage }: RepoTableProps) {
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [detailRepo, setDetailRepo] = useState<{ owner: string; name: string } | null>(null);
+  const [columnWidths, setColumnWidths] = useState(() => DEFAULT_COLUMNS.map(c => c.width));
   const router = useRouter();
   const searchParams = useSearchParams();
+  const resizingRef = useRef<{ colIndex: number; startX: number; startWidth: number } | null>(null);
 
   const toggleSelect = useCallback((id: number) => {
     setSelectedIds(prev => {
@@ -61,11 +83,46 @@ export function RepoTable({ repos, filters, totalCount }: RepoTableProps) {
     router.push(`/mission-control?${params.toString()}`);
   }
 
+  // Column resize handlers
+  function onResizeStart(e: React.MouseEvent, colIndex: number) {
+    e.preventDefault();
+    resizingRef.current = { colIndex, startX: e.clientX, startWidth: columnWidths[colIndex] };
+
+    function onMouseMove(e: MouseEvent) {
+      if (!resizingRef.current) return;
+      const diff = e.clientX - resizingRef.current.startX;
+      const newWidth = Math.max(DEFAULT_COLUMNS[resizingRef.current.colIndex].minWidth, resizingRef.current.startWidth + diff);
+      setColumnWidths(prev => {
+        const next = [...prev];
+        next[resizingRef.current!.colIndex] = newWidth;
+        return next;
+      });
+    }
+
+    function onMouseUp() {
+      resizingRef.current = null;
+      document.removeEventListener('mousemove', onMouseMove);
+      document.removeEventListener('mouseup', onMouseUp);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    }
+
+    document.addEventListener('mousemove', onMouseMove);
+    document.addEventListener('mouseup', onMouseUp);
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+  }
+
+  const gridTemplate = columnWidths.map(w => `${w}px`).join(' ');
+
   const totalDiskBytes = repos.reduce((sum, r) => sum + (r.localState?.diskUsageBytes || 0), 0);
   const clonedCount = repos.filter(r => r.localState?.clonePath).length;
 
+  // Empty state for specific pipeline tabs
+  const emptyState = activeStage && EMPTY_STATE_MESSAGES[activeStage];
+
   return (
-    <div className="flex-1 min-w-0">
+    <div className="flex-1 min-w-0 overflow-x-auto">
       {/* Toolbar */}
       <div className="flex items-center gap-2 px-4 py-2.5 border-b border-[#21262d] bg-[#161b22]">
         <input
@@ -100,34 +157,46 @@ export function RepoTable({ repos, filters, totalCount }: RepoTableProps) {
         />
       )}
 
-      {/* Table header */}
+      {/* Table header with resize handles */}
       <div
-        className="grid px-4 py-1.5 border-b border-[#21262d] bg-[#161b22] text-[11px] text-[#8b949e] font-semibold"
-        style={{ gridTemplateColumns: '28px 2fr 110px 110px 130px 90px 70px 70px 160px' }}
+        className="grid px-4 py-1.5 border-b border-[#21262d] bg-[#161b22] text-[11px] text-[#8b949e] font-semibold select-none"
+        style={{ gridTemplateColumns: gridTemplate }}
       >
-        <div className="px-0">
-          <input
-            type="checkbox"
-            checked={selectedIds.size === repos.length && repos.length > 0}
-            onChange={selectAll}
-            className="accent-[#1f6feb]"
-          />
-        </div>
-        <div>Repository</div>
-        <div>Stage</div>
-        <div>Local</div>
-        <div>Version</div>
-        <div>Activity</div>
-        <div>Stars</div>
-        <div>Disk</div>
-        <div>Actions</div>
+        {DEFAULT_COLUMNS.map((col, i) => (
+          <div key={col.key} className="relative flex items-center">
+            {col.key === 'checkbox' ? (
+              <input
+                type="checkbox"
+                checked={selectedIds.size === repos.length && repos.length > 0}
+                onChange={selectAll}
+                className="accent-[#1f6feb]"
+              />
+            ) : (
+              <span className="truncate">{col.label}</span>
+            )}
+            {col.resizable && (
+              <div
+                onMouseDown={e => onResizeStart(e, i)}
+                className="absolute right-0 top-0 bottom-0 w-1.5 cursor-col-resize hover:bg-[#1f6feb] transition-colors"
+                style={{ marginRight: '-3px' }}
+              />
+            )}
+          </div>
+        ))}
       </div>
 
       {/* Rows */}
       <div className="px-4">
         {repos.length === 0 ? (
-          <div className="text-center text-[#484f58] py-12 text-sm">
-            No repos match the current filters.
+          <div className="text-center py-16">
+            {emptyState ? (
+              <>
+                <div className="text-[#8b949e] text-sm mb-2">{emptyState.title}</div>
+                <div className="text-[#484f58] text-xs">{emptyState.hint}</div>
+              </>
+            ) : (
+              <div className="text-[#484f58] text-sm">No repos match the current filters.</div>
+            )}
           </div>
         ) : (
           repos.map(data => (
@@ -137,6 +206,7 @@ export function RepoTable({ repos, filters, totalCount }: RepoTableProps) {
               selected={selectedIds.has(data.repo.id)}
               onSelect={toggleSelect}
               onOpenDetail={(owner, name) => setDetailRepo({ owner, name })}
+              gridTemplate={gridTemplate}
             />
           ))
         )}

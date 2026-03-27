@@ -81,6 +81,7 @@ export default async function MissionControlPage({
           repos={repos}
           filters={filters}
           totalCount={repos.length}
+          activeStage={filters.stage || null}
         />
       </div>
     </div>

@@ -2,6 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { StageDropdown } from './stage-dropdown';
+import { OverflowMenu } from './overflow-menu';
 
 interface RepoRowData {
   repo: {
@@ -30,6 +31,7 @@ interface RepoTableRowProps {
   selected: boolean;
   onSelect: (id: number) => void;
   onOpenDetail: (owner: string, name: string) => void;
+  gridTemplate: string;
 }
 
 const WATCH_ICONS: Record<string, string> = {
@@ -38,7 +40,7 @@ const WATCH_ICONS: Record<string, string> = {
   full_watch: '📺',
 };
 
-export function RepoTableRow({ data, selected, onSelect, onOpenDetail }: RepoTableRowProps) {
+export function RepoTableRow({ data, selected, onSelect, onOpenDetail, gridTemplate }: RepoTableRowProps) {
   const { repo, localState } = data;
   const router = useRouter();
 
@@ -138,7 +140,7 @@ export function RepoTableRow({ data, selected, onSelect, onOpenDetail }: RepoTab
         hover:bg-[#161b2266] transition-colors
         ${selected ? 'bg-[#1f6feb11]' : ''}
       `}
-      style={{ gridTemplateColumns: '28px 2fr 110px 110px 130px 90px 70px 70px 160px' }}
+      style={{ gridTemplateColumns: gridTemplate }}
     >
       <div className="px-2 py-2">
         <input
@@ -154,12 +156,15 @@ export function RepoTableRow({ data, selected, onSelect, onOpenDetail }: RepoTab
         <button
           onClick={() => onOpenDetail(repo.owner, repo.name)}
           className="text-[#58a6ff] font-semibold hover:underline text-left truncate block"
+          title={repo.description || undefined}
         >
           {repo.fullName}
         </button>
-        <span className="text-[10px] text-[#8b949e] block truncate">
-          {WATCH_ICONS[repo.watchLevel] || ''} {repo.watchLevel.replace(/_/g, ' ')}
-        </span>
+        {repo.watchLevel !== 'releases_only' && (
+          <span className="text-[10px] text-[#8b949e] block truncate">
+            {WATCH_ICONS[repo.watchLevel] || ''} {repo.watchLevel.replace(/_/g, ' ')}
+          </span>
+        )}
       </div>
 
       <div className="py-2">
@@ -186,10 +191,10 @@ export function RepoTableRow({ data, selected, onSelect, onOpenDetail }: RepoTab
         {diskDisplay}
       </div>
 
-      <div className="py-2 flex gap-1">
+      <div className="py-2 flex gap-1 items-center">
         <button
           onClick={handlePrimaryAction}
-          className={`text-[10px] px-2 py-0.5 rounded text-white ${primaryColor}`}
+          className={`text-[10px] px-2 py-0.5 rounded text-white transition-opacity ${primaryColor} ${!isCloned && !isOutdated ? 'opacity-60 hover:opacity-100' : ''}`}
         >
           {primaryLabel}
         </button>
@@ -212,6 +217,15 @@ export function RepoTableRow({ data, selected, onSelect, onOpenDetail }: RepoTab
             📂
           </button>
         )}
+        <OverflowMenu
+          repoId={repo.id}
+          owner={repo.owner}
+          name={repo.name}
+          fullName={repo.fullName}
+          currentStage={repo.workflowStage}
+          currentWatchLevel={repo.watchLevel}
+          isCloned={isCloned}
+        />
       </div>
     </div>
   );

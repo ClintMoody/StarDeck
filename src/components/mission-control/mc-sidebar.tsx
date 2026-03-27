@@ -3,6 +3,7 @@
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useState } from 'react';
 import { MissionControlFilters } from '@/lib/queries';
+import { ScanSetup } from './scan-setup';
 
 interface Collection {
   id: number;
@@ -36,6 +37,7 @@ export function MCSidebar({ collections, savedViews, tags, activeFilters }: MCSi
   const searchParams = useSearchParams();
   const [newCollectionName, setNewCollectionName] = useState('');
   const [showNewCollection, setShowNewCollection] = useState(false);
+  const [showScanSetup, setShowScanSetup] = useState(false);
 
   function navigateWithFilter(key: string, value: string | null) {
     const params = new URLSearchParams(searchParams.toString());
@@ -187,6 +189,19 @@ export function MCSidebar({ collections, savedViews, tags, activeFilters }: MCSi
           ))}
         </div>
       )}
+
+      {/* Scan Directories */}
+      <div className="mt-4 pt-4 border-t border-[#21262d]">
+        <div className="text-[#8b949e] font-semibold uppercase text-[10px] mb-2">Local Repos</div>
+        <button
+          onClick={() => setShowScanSetup(true)}
+          className="w-full text-left text-[#58a6ff] hover:text-[#79c0ff] px-2 py-1.5 rounded hover:bg-[#21262d] transition-colors flex items-center gap-1.5"
+        >
+          <span>📂</span> Scan Directories...
+        </button>
+      </div>
+
+      {showScanSetup && <ScanSetup onClose={() => setShowScanSetup(false)} />}
     </aside>
   );
 }
