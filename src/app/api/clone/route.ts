@@ -4,6 +4,9 @@ import { processManager } from "@/lib/process-manager";
 import { getRepoByFullName, upsertRepoLocalState } from "@/lib/queries";
 import { detectProjectType } from "@/lib/recipe-detector";
 import { upsertRepoRecipe } from "@/lib/queries";
+import { db } from "@/lib/db";
+import { starredRepos } from "@/lib/db/schema";
+import { eq, and, inArray } from "drizzle-orm";
 import path from "path";
 import fs from "fs";
 
@@ -53,6 +56,18 @@ export async function POST(request: NextRequest) {
           approved: false,
         });
         upsertRepoLocalState(repo.id, { processStatus: "stopped" });
+
+        // Auto-advance workflow stage to "downloaded"
+        db.update(starredRepos)
+          .set({ workflowStage: 'downloaded' })
+          .where(
+            and(
+              eq(starredRepos.owner, owner),
+              eq(starredRepos.name, name),
+              inArray(starredRepos.workflowStage, ['watching', 'want_to_try']),
+            )
+          )
+          .run();
       } catch {
         upsertRepoLocalState(repo.id, { processStatus: "error" });
       }

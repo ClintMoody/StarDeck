@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { processManager } from "@/lib/process-manager";
 import { getRepoByFullName, getRepoLocalState, getRepoRecipe, upsertRepoLocalState } from "@/lib/queries";
+import { db } from "@/lib/db";
+import { starredRepos } from "@/lib/db/schema";
+import { eq, and } from "drizzle-orm";
 
 export async function POST(request: NextRequest) {
   const session = await auth();
@@ -34,6 +37,18 @@ export async function POST(request: NextRequest) {
   const managed = processManager.run(repo.id, runCommand, localState.clonePath);
 
   upsertRepoLocalState(repo.id, { processStatus: "running" });
+
+  // Auto-advance workflow stage to "active" on first run
+  db.update(starredRepos)
+    .set({ workflowStage: 'active' })
+    .where(
+      and(
+        eq(starredRepos.owner, owner),
+        eq(starredRepos.name, name),
+        eq(starredRepos.workflowStage, 'downloaded'),
+      )
+    )
+    .run();
 
   return NextResponse.json({ ok: true, pid: managed.pid });
 }
