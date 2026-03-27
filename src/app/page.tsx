@@ -113,6 +113,8 @@ export default async function HomePage({ searchParams }: PageProps) {
 
 /**
  * Build the sectioned view from all repos + local state.
+ * Each repo appears in ONE category only (its primary/first match).
+ * Status sections (Active, Cloned) and Recently Starred can overlap with categories.
  */
 function buildSections(
   allRepos: ReturnType<typeof getFilteredRepos>,
@@ -120,7 +122,7 @@ function buildSections(
 ): RepoSection[] {
   const sections: RepoSection[] = [];
 
-  // 1. ACTIVE NOW — repos that are running or were recently cloned
+  // 1. ACTIVE NOW — repos that are running or installing
   const activeRepos = allRepos.filter((r) => {
     const state = localStateMap.get(r.id);
     return state && (state.processStatus === "running" || state.processStatus === "installing");
@@ -131,58 +133,28 @@ function buildSections(
     title: "Active Now",
     icon: "🟢",
     repos: activeRepos,
-    priority: "high",
-    emptyMessage: "No repos running. Clone and run a repo to see it here.",
+    type: "status",
+    emptyMessage: "No repos running right now",
   });
 
-  // 2. RECENTLY CLONED — repos that have local state but aren't running
-  const clonedRepos = allRepos.filter((r) => {
-    const state = localStateMap.get(r.id);
-    return state?.clonePath && state.processStatus !== "running" && state.processStatus !== "installing";
-  });
-
-  if (clonedRepos.length > 0) {
-    sections.push({
-      id: "cloned",
-      title: "Cloned Locally",
-      icon: "💾",
-      repos: clonedRepos,
-      priority: "high",
-    });
-  }
-
-  // 3. RECENTLY STARRED — last 8 repos starred (your inbox)
+  // 2. RECENTLY STARRED — last 6 repos starred (your inbox)
   const recentlyStarred = [...allRepos]
     .sort((a, b) => {
       const dateA = a.starredAt ? new Date(a.starredAt).getTime() : 0;
       const dateB = b.starredAt ? new Date(b.starredAt).getTime() : 0;
       return dateB - dateA;
     })
-    .slice(0, 8);
+    .slice(0, 6);
 
   sections.push({
     id: "recent",
     title: "Recently Starred",
     icon: "✨",
     repos: recentlyStarred,
-    priority: "high",
+    type: "recent",
   });
 
-  // 4. CATEGORY SECTIONS — group remaining repos by category
-  const categoryMap = new Map<string, typeof allRepos>();
-
-  for (const repo of allRepos) {
-    const cats = categorizeRepo(repo);
-    for (const cat of cats) {
-      if (!categoryMap.has(cat)) categoryMap.set(cat, []);
-      categoryMap.get(cat)!.push(repo);
-    }
-  }
-
-  // Sort categories by count (largest first)
-  const sortedCategories = [...categoryMap.entries()]
-    .sort((a, b) => b[1].length - a[1].length);
-
+  // 3. CATEGORY SECTIONS — each repo goes to its FIRST matched category only
   const categoryIcons: Record<string, string> = {
     "AI & Agents": "🤖",
     "Security & OSINT": "🔒",
@@ -196,13 +168,33 @@ function buildSections(
     "Other": "📁",
   };
 
+  const categoryMap = new Map<string, typeof allRepos>();
+  const assigned = new Set<number>();
+
+  // First pass: assign each repo to its primary (first) category
+  for (const repo of allRepos) {
+    const cats = categorizeRepo(repo);
+    const primaryCat = cats[0] ?? "Other";
+    if (!categoryMap.has(primaryCat)) categoryMap.set(primaryCat, []);
+    categoryMap.get(primaryCat)!.push(repo);
+    assigned.add(repo.id);
+  }
+
+  // Sort categories by count (largest first), but put "Other" last
+  const sortedCategories = [...categoryMap.entries()]
+    .sort((a, b) => {
+      if (a[0] === "Other") return 1;
+      if (b[0] === "Other") return -1;
+      return b[1].length - a[1].length;
+    });
+
   for (const [catName, catRepos] of sortedCategories) {
     sections.push({
       id: `cat-${catName}`,
       title: catName,
       icon: categoryIcons[catName] ?? "📁",
       repos: catRepos,
-      priority: "normal",
+      type: "category",
     });
   }
 
