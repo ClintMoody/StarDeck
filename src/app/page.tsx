@@ -82,7 +82,18 @@ export default async function HomePage({ searchParams }: PageProps) {
   } else {
     // Home mode — show sectioned overview
     const sections = buildSections(allRepos, localStateMap);
-    mainContent = <SectionedView sections={sections} localStateMap={localStateObj} />;
+    const runningCount = allLocalState.filter((ls) => ls.processStatus === "running").length;
+    const clonedCount = allLocalState.filter((ls) => ls.clonePath).length;
+    mainContent = (
+      <SectionedView
+        sections={sections}
+        localStateMap={localStateObj}
+        totalRepos={stats.total}
+        totalCategories={categories.length}
+        clonedCount={clonedCount}
+        runningCount={runningCount}
+      />
+    );
   }
 
   return (

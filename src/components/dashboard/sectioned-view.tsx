@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import type { InferSelectModel } from "drizzle-orm";
 import type { starredRepos, repoLocalState } from "@/lib/db/schema";
 import { SlideOutPanel } from "@/components/slide-out-panel";
@@ -21,12 +20,22 @@ export interface RepoSection {
 interface SectionedViewProps {
   sections: RepoSection[];
   localStateMap: Record<number, LocalState>;
+  totalRepos: number;
+  totalCategories: number;
+  clonedCount: number;
+  runningCount: number;
 }
 
-export function SectionedView({ sections, localStateMap }: SectionedViewProps) {
+export function SectionedView({
+  sections,
+  localStateMap,
+  totalRepos,
+  totalCategories,
+  clonedCount,
+  runningCount,
+}: SectionedViewProps) {
   const [selectedRepo, setSelectedRepo] = useState<Repo | null>(null);
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
-  const router = useRouter();
 
   function toggleExpand(sectionId: string) {
     setExpandedSections((prev) => {
@@ -37,60 +46,80 @@ export function SectionedView({ sections, localStateMap }: SectionedViewProps) {
     });
   }
 
-  // Hide empty category sections, but show empty status sections as a thin bar
-  const visibleSections = sections.filter(
-    (s) => s.type !== "category" || s.repos.length > 0
-  );
+  // Only show sections that have content (hide empty status/recent too)
+  const visibleSections = sections.filter((s) => s.repos.length > 0);
 
   return (
     <>
+      {/* Stats Bar */}
+      <div className="flex items-center gap-4 mb-6 text-xs text-gray-500">
+        <span className="flex items-center gap-1.5">
+          <span className="text-yellow-500">&#9733;</span>
+          <span className="text-gray-300 font-medium">{totalRepos}</span> repos
+        </span>
+        <span className="text-gray-800">|</span>
+        <span>{totalCategories} categories</span>
+        {runningCount > 0 && (
+          <>
+            <span className="text-gray-800">|</span>
+            <span className="flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
+              <span className="text-green-400">{runningCount} running</span>
+            </span>
+          </>
+        )}
+        {clonedCount > 0 && (
+          <>
+            <span className="text-gray-800">|</span>
+            <span>{clonedCount} cloned</span>
+          </>
+        )}
+      </div>
+
       <div className="space-y-6">
         {visibleSections.map((section) => {
           const isExpanded = expandedSections.has(section.id);
-          const previewCount = section.type === "category" ? 4 : 6;
+          const previewCount = section.type === "category" ? 4 : 3;
           const displayRepos = isExpanded ? section.repos : section.repos.slice(0, previewCount);
           const hiddenCount = section.repos.length - previewCount;
-
-          // Status sections with no repos: minimal one-liner
-          if (section.type === "status" && section.repos.length === 0) {
-            return (
-              <div key={section.id} className="flex items-center gap-2 text-sm text-gray-600 py-1">
-                <span>{section.icon}</span>
-                <span>{section.emptyMessage ?? `No ${section.title.toLowerCase()}`}</span>
-              </div>
-            );
-          }
 
           return (
             <div key={section.id}>
               {/* Section Header */}
-              <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center justify-between mb-2.5">
                 <div className="flex items-center gap-2">
                   <span>{section.icon}</span>
-                  <h2 className={`text-sm font-semibold uppercase tracking-wider ${
+                  <h2 className={`text-xs font-bold uppercase tracking-widest ${
                     section.type === "status" ? "text-green-400" :
                     section.type === "recent" ? "text-amber-400" :
-                    "text-gray-400"
+                    "text-gray-500"
                   }`}>
                     {section.title}
                   </h2>
-                  <span className="text-xs text-gray-600 bg-gray-800/50 px-1.5 py-0.5 rounded-full">
+                  <span className="text-xs text-gray-700 bg-gray-800/40 px-1.5 py-0.5 rounded">
                     {section.repos.length}
                   </span>
                 </div>
-                {hiddenCount > 0 && (
+                {hiddenCount > 0 && !isExpanded && (
                   <button
                     onClick={() => toggleExpand(section.id)}
-                    className="text-xs text-blue-400 hover:text-blue-300 transition-colors"
+                    className="text-xs text-blue-500 hover:text-blue-400 transition-colors"
                   >
-                    {isExpanded ? "Show less" : `+${hiddenCount} more`}
+                    Show all {section.repos.length} &rarr;
+                  </button>
+                )}
+                {isExpanded && section.repos.length > previewCount && (
+                  <button
+                    onClick={() => toggleExpand(section.id)}
+                    className="text-xs text-gray-600 hover:text-gray-400 transition-colors"
+                  >
+                    Collapse
                   </button>
                 )}
               </div>
 
               {/* Cards */}
               {section.type === "category" ? (
-                // Compact row for categories
                 <div className="grid gap-2 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
                   {displayRepos.map((repo) => (
                     <CompactCard
@@ -103,14 +132,13 @@ export function SectionedView({ sections, localStateMap }: SectionedViewProps) {
                   {!isExpanded && hiddenCount > 0 && (
                     <button
                       onClick={() => toggleExpand(section.id)}
-                      className="bg-gray-900/20 border border-gray-800/40 border-dashed rounded-lg py-3 flex items-center justify-center hover:border-blue-800/50 transition-all text-sm text-gray-600 hover:text-blue-400"
+                      className="bg-gray-900/20 border border-gray-800/30 border-dashed rounded-lg py-4 flex items-center justify-center hover:border-blue-800/40 transition-all text-xs text-gray-600 hover:text-blue-400"
                     >
-                      +{hiddenCount} more
+                      +{hiddenCount}
                     </button>
                   )}
                 </div>
               ) : (
-                // Full cards for status/recent sections
                 <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
                   {displayRepos.map((repo) => (
                     <FullCard
@@ -123,7 +151,7 @@ export function SectionedView({ sections, localStateMap }: SectionedViewProps) {
                   {!isExpanded && hiddenCount > 0 && (
                     <button
                       onClick={() => toggleExpand(section.id)}
-                      className="bg-gray-900/20 border border-gray-800/40 border-dashed rounded-lg py-6 flex items-center justify-center hover:border-blue-800/50 transition-all text-sm text-gray-600 hover:text-blue-400"
+                      className="bg-gray-900/20 border border-gray-800/30 border-dashed rounded-lg py-8 flex items-center justify-center hover:border-blue-800/40 transition-all text-sm text-gray-600 hover:text-blue-400"
                     >
                       +{hiddenCount} more
                     </button>
@@ -145,7 +173,7 @@ export function SectionedView({ sections, localStateMap }: SectionedViewProps) {
   );
 }
 
-/** Compact card for category sections — name, language, stars, one-line desc */
+/** Compact card — name, stars, owner, one-line description */
 function CompactCard({ repo, status, onClick }: { repo: Repo; status?: string; onClick: () => void }) {
   const LANG_COLORS: Record<string, string> = {
     TypeScript: "bg-blue-500", JavaScript: "bg-yellow-400", Python: "bg-green-500",
@@ -157,7 +185,7 @@ function CompactCard({ repo, status, onClick }: { repo: Repo; status?: string; o
   return (
     <div
       onClick={onClick}
-      className="bg-gray-900/60 border border-gray-800/60 rounded-lg px-3 py-2.5 hover:border-blue-700/50 hover:bg-gray-900 transition-all cursor-pointer group"
+      className="bg-gray-900/50 border border-gray-800/50 rounded-lg px-3 py-2.5 hover:border-blue-700/40 hover:bg-gray-900/80 transition-all cursor-pointer group"
     >
       <div className="flex items-center gap-2 mb-1">
         {repo.language && (
@@ -168,15 +196,18 @@ function CompactCard({ repo, status, onClick }: { repo: Repo; status?: string; o
         </span>
         {status === "running" && <span className="w-1.5 h-1.5 rounded-full bg-green-500 flex-shrink-0" />}
       </div>
-      <div className="flex items-center gap-3 text-xs text-gray-500">
-        <span className="text-yellow-500/70">&#9733; {repo.starCount?.toLocaleString()}</span>
-        <span className="truncate text-gray-600">{repo.owner}</span>
+      {repo.description && (
+        <p className="text-xs text-gray-600 truncate mb-1">{repo.description}</p>
+      )}
+      <div className="flex items-center gap-3 text-xs text-gray-600">
+        <span className="text-yellow-600">&#9733; {repo.starCount?.toLocaleString()}</span>
+        <span className="truncate">{repo.owner}</span>
       </div>
     </div>
   );
 }
 
-/** Full card for status/recent sections — includes description and topics */
+/** Full card for status/recent — description + topics */
 function FullCard({ repo, status, onClick }: { repo: Repo; status?: string; onClick: () => void }) {
   const topics: string[] = repo.topics ? JSON.parse(repo.topics) : [];
   const LANG_COLORS: Record<string, string> = {
@@ -189,10 +220,10 @@ function FullCard({ repo, status, onClick }: { repo: Repo; status?: string; onCl
   return (
     <div
       onClick={onClick}
-      className="bg-gray-900/80 border border-gray-800 rounded-lg p-4 hover:border-blue-700/50 hover:bg-gray-900 transition-all cursor-pointer group"
+      className="bg-gray-900/80 border border-gray-800 rounded-lg p-3.5 hover:border-blue-700/50 hover:bg-gray-900 transition-all cursor-pointer group"
     >
-      <div className="flex items-start justify-between mb-1.5">
-        <span className="text-blue-400 group-hover:text-blue-300 font-medium text-sm truncate">
+      <div className="flex items-start justify-between mb-1">
+        <span className="text-sm text-blue-400 group-hover:text-blue-300 font-medium truncate">
           {repo.fullName}
         </span>
         <div className="flex items-center gap-1.5 flex-shrink-0 ml-2">
@@ -200,7 +231,7 @@ function FullCard({ repo, status, onClick }: { repo: Repo; status?: string; onCl
             <span className="text-xs bg-green-900/40 text-green-400 px-1.5 py-0.5 rounded-full">running</span>
           )}
           {repo.language && (
-            <span className="flex items-center gap-1 text-xs text-gray-400">
+            <span className="flex items-center gap-1 text-xs text-gray-500">
               <span className={`w-2 h-2 rounded-full ${LANG_COLORS[repo.language] ?? "bg-gray-500"}`} />
               {repo.language}
             </span>
@@ -213,14 +244,14 @@ function FullCard({ repo, status, onClick }: { repo: Repo; status?: string; onCl
       )}
 
       <div className="flex items-center gap-3 text-xs text-gray-600">
-        <span className="text-yellow-500/70">&#9733; {repo.starCount?.toLocaleString()}</span>
+        <span className="text-yellow-600">&#9733; {repo.starCount?.toLocaleString()}</span>
         {repo.forkCount ? <span>&#9741; {repo.forkCount?.toLocaleString()}</span> : null}
       </div>
 
       {topics.length > 0 && (
         <div className="flex flex-wrap gap-1 mt-2">
           {topics.slice(0, 3).map((t) => (
-            <span key={t} className="text-xs bg-indigo-900/20 text-indigo-400/70 px-1.5 py-0.5 rounded-full">{t}</span>
+            <span key={t} className="text-xs bg-indigo-900/20 text-indigo-400/60 px-1.5 py-0.5 rounded">{t}</span>
           ))}
           {topics.length > 3 && <span className="text-xs text-gray-700">+{topics.length - 3}</span>}
         </div>
