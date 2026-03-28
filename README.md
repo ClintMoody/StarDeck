@@ -178,6 +178,16 @@ StarDeck
 
 ---
 
+## Contributors
+
+<a href="https://github.com/ClintMoody">
+  <img src="https://avatars.githubusercontent.com/u/100443920?v=4" width="60" height="60" style="border-radius: 50%;" alt="Clint Moody"/>
+  <br/>
+  <sub><b>Clint Moody</b></sub>
+</a>
+
+---
+
 ## License
 
 MIT
