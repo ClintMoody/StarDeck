@@ -1,10 +1,12 @@
 import { auth } from '@/lib/auth';
 import { redirect } from 'next/navigation';
-import { getMissionControlRepos, getStageCounts, getAllCollections, getCollectionCounts, getAllSavedViews, getAllTags, getLastSyncTime, type MissionControlFilters } from '@/lib/queries';
+import { getMissionControlRepos, getStageCounts, getAllCollections, getCollectionCounts, getAllSavedViews, getAllTags, getLastSyncTime, getAllWorkflowStages, getAllDbCategories, getRepoCategoryCounts, type MissionControlFilters } from '@/lib/queries';
 import { PipelineBar } from '@/components/mission-control/pipeline-bar';
 import { MCSidebar } from '@/components/mission-control/mc-sidebar';
 import { RepoTable } from '@/components/mission-control/repo-table';
 import { DashboardHeader } from '@/components/dashboard/header';
+import { db } from '@/lib/db';
+import { repoCategories } from '@/lib/db/schema';
 
 export default async function MissionControlPage({
   searchParams,
@@ -25,19 +27,27 @@ export default async function MissionControlPage({
     tagId: params.tagId ? Number(params.tagId) : undefined,
   };
 
-  const [repos, stageCounts, collections, collectionCounts, savedViews, tags] = await Promise.all([
+  const [repos, stageCounts, collections, collectionCounts, savedViews, tags, stages, allCategories, categoryCounts] = await Promise.all([
     getMissionControlRepos(filters),
     getStageCounts(),
     getAllCollections(),
     getCollectionCounts(),
     getAllSavedViews(),
     getAllTags(),
+    getAllWorkflowStages(),
+    getAllDbCategories(),
+    getRepoCategoryCounts(),
   ]);
 
   const lastSyncTime = getLastSyncTime();
 
   const stageCountMap = Object.fromEntries(stageCounts.map(s => [s.stage, s.count]));
   const totalCount = Object.values(stageCountMap).reduce((sum, c) => sum + c, 0);
+
+  const categoryCountMap = Object.fromEntries(categoryCounts.map(c => [c.categoryId, c.count]));
+
+  const repoCatAssignments = db.select().from(repoCategories).all();
+  const repoCatMap = Object.fromEntries(repoCatAssignments.map(a => [a.repoId, { categoryId: a.categoryId, isAuto: a.isAuto }]));
 
   const collectionsWithCounts = collections.map(c => ({
     ...c,
@@ -55,6 +65,7 @@ export default async function MissionControlPage({
         stageCounts={stageCountMap}
         totalCount={totalCount}
         activeStage={filters.stage || null}
+        stages={stages}
       />
 
       <div className="flex min-h-[calc(100vh-140px)]">
@@ -69,6 +80,9 @@ export default async function MissionControlPage({
           filters={filters}
           totalCount={repos.length}
           activeStage={filters.stage || null}
+          stages={stages}
+          categories={allCategories}
+          repoCategoryMap={repoCatMap}
         />
       </div>
     </div>

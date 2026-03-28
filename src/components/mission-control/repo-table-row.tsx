@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { StageDropdown } from './stage-dropdown';
+import { CategoryDropdown } from './category-dropdown';
 import { WatchLevelDropdown } from './watch-level-dropdown';
 import { OverflowMenu } from './overflow-menu';
 import { compareVersions, formatVersionDisplay } from '@/lib/version-check';
@@ -21,6 +22,7 @@ interface RepoRowData {
     lastReleaseVersion: string | null;
     latestRemoteSha: string | null;
     workflowStage: string;
+    workflowStageId: number | null;
     watchLevel: string;
   };
   localState: {
@@ -38,10 +40,13 @@ interface RepoTableRowProps {
   onSelect: (id: number) => void;
   onOpenDetail: (owner: string, name: string) => void;
   gridTemplate: string;
+  stages: { id: number; name: string; icon: string; color: string }[];
+  categories: { id: number; name: string; icon: string; color: string }[];
+  repoCategoryMap: Record<number, { categoryId: number; isAuto: boolean }>;
 }
 
 
-export function RepoTableRow({ data, selected, onSelect, onOpenDetail, gridTemplate }: RepoTableRowProps) {
+export function RepoTableRow({ data, selected, onSelect, onOpenDetail, gridTemplate, stages, categories, repoCategoryMap }: RepoTableRowProps) {
   const { repo, localState } = data;
   const router = useRouter();
 
@@ -230,7 +235,16 @@ export function RepoTableRow({ data, selected, onSelect, onOpenDetail, gridTempl
       </div>
 
       <div className="py-2">
-        <StageDropdown repoId={repo.id} currentStage={repo.workflowStage} />
+        <StageDropdown repoId={repo.id} currentStageId={repo.workflowStageId} stages={stages} />
+      </div>
+
+      <div className="py-2">
+        <CategoryDropdown
+          repoId={repo.id}
+          currentCategoryId={repoCategoryMap[repo.id]?.categoryId ?? null}
+          isAuto={repoCategoryMap[repo.id]?.isAuto ?? true}
+          categories={categories}
+        />
       </div>
 
       <div className="py-2">

@@ -6,9 +6,10 @@ interface PipelineBarProps {
   stageCounts: Record<string, number>;
   totalCount: number;
   activeStage: string | null;
+  stages?: { id: number; name: string; icon: string; color: string }[];
 }
 
-const STAGES = [
+const FALLBACK_STAGES = [
   { key: null, label: 'All', icon: '' },
   { key: 'watching', label: 'Watching', icon: '\u{1F441}' },
   { key: 'want_to_try', label: 'Want to Try', icon: '\u{1F9EA}' },
@@ -17,7 +18,7 @@ const STAGES = [
   { key: 'archived', label: 'Archived', icon: '\u{1F4C1}' },
 ];
 
-export function PipelineBar({ stageCounts, totalCount, activeStage }: PipelineBarProps) {
+export function PipelineBar({ stageCounts, totalCount, activeStage, stages }: PipelineBarProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -31,9 +32,21 @@ export function PipelineBar({ stageCounts, totalCount, activeStage }: PipelineBa
     router.push(`/mission-control?${params.toString()}`);
   }
 
+  // Build display stages from DB stages if available, otherwise use fallback
+  const displayStages: { key: string | null; label: string; icon: string }[] = stages && stages.length > 0
+    ? [
+        { key: null, label: 'All', icon: '' },
+        ...stages.map(s => ({
+          key: s.name.toLowerCase().replace(/\s+/g, '_'),
+          label: s.name,
+          icon: s.icon,
+        })),
+      ]
+    : FALLBACK_STAGES;
+
   return (
     <div className="flex gap-0.5 px-5 py-3 bg-[#0d1117] border-b border-[#21262d]">
-      {STAGES.map((stage) => {
+      {displayStages.map((stage) => {
         const count = stage.key === null ? totalCount : (stageCounts[stage.key] || 0);
         const isActive = activeStage === stage.key;
 

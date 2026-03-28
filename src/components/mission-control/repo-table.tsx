@@ -16,6 +16,9 @@ interface RepoTableProps {
   filters: MissionControlFilters;
   totalCount: number;
   activeStage: string | null;
+  stages: { id: number; name: string; icon: string; color: string }[];
+  categories: { id: number; name: string; icon: string; color: string }[];
+  repoCategoryMap: Record<number, { categoryId: number; isAuto: boolean }>;
 }
 
 const SORT_OPTIONS = [
@@ -30,6 +33,7 @@ const DEFAULT_COLUMNS = [
   { key: 'checkbox', label: '', width: 28, minWidth: 28, resizable: false },
   { key: 'repo', label: 'Repository', width: 250, minWidth: 150, resizable: true },
   { key: 'stage', label: 'Stage', width: 120, minWidth: 80, resizable: true },
+  { key: 'category', label: 'Category', width: 150, minWidth: 100, resizable: true },
   { key: 'watch', label: 'Watch', width: 140, minWidth: 100, resizable: true },
   { key: 'local', label: 'Local', width: 100, minWidth: 80, resizable: true },
   { key: 'version', label: 'Version', width: 130, minWidth: 80, resizable: true },
@@ -46,7 +50,7 @@ const EMPTY_STATE_MESSAGES: Record<string, { title: string; hint: string }> = {
   archived: { title: 'No archived repos', hint: 'Move repos here when you\'re done with them.' },
 };
 
-export function RepoTable({ repos, filters, totalCount, activeStage }: RepoTableProps) {
+export function RepoTable({ repos, filters, totalCount, activeStage, stages, categories, repoCategoryMap }: RepoTableProps) {
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [detailRepo, setDetailRepo] = useState<{ owner: string; name: string } | null>(null);
   const [columnWidths, setColumnWidths] = useState(() => DEFAULT_COLUMNS.map(c => c.width));
@@ -239,6 +243,9 @@ export function RepoTable({ repos, filters, totalCount, activeStage }: RepoTable
               onSelect={toggleSelect}
               onOpenDetail={(owner, name) => setDetailRepo({ owner, name })}
               gridTemplate={gridTemplate}
+              stages={stages}
+              categories={categories}
+              repoCategoryMap={repoCategoryMap}
             />
           ))
         )}
