@@ -1,0 +1,12 @@
+[ 8409472ms] [ERROR] WebSocket connection to 'ws://localhost:3000/_next/webpack-hmr?id=lZJLZUhNy1VMC7PlW0_rt' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_client_0fhqo1d._.js:13299
+[ 8410474ms] [ERROR] WebSocket connection to 'ws://localhost:3000/_next/webpack-hmr?id=lZJLZUhNy1VMC7PlW0_rt' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_client_0fhqo1d._.js:13299
+[ 8411476ms] [ERROR] WebSocket connection to 'ws://localhost:3000/_next/webpack-hmr?id=lZJLZUhNy1VMC7PlW0_rt' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_client_0fhqo1d._.js:13299
+[ 8412478ms] [ERROR] WebSocket connection to 'ws://localhost:3000/_next/webpack-hmr?id=lZJLZUhNy1VMC7PlW0_rt' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_client_0fhqo1d._.js:13299
+[ 8413484ms] [ERROR] WebSocket connection to 'ws://localhost:3000/_next/webpack-hmr?id=lZJLZUhNy1VMC7PlW0_rt' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_client_0fhqo1d._.js:13299
+[ 8418489ms] [ERROR] WebSocket connection to 'ws://localhost:3000/_next/webpack-hmr?id=lZJLZUhNy1VMC7PlW0_rt' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_client_0fhqo1d._.js:13299
+[ 8419455ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3000/api/notifications:0
+[ 8419488ms] TypeError: Failed to fetch
+    at fetchNotifications (http://localhost:3000/_next/static/chunks/src_components_0ra-x~c._.js:2506:27)
+[ 8419470ms] [ERROR] WebSocket is already in CLOSING or CLOSED state. @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:2790
+[ 8419471ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3000/__nextjs_original-stack-frames:0
+[ 8423496ms] [ERROR] WebSocket connection to 'ws://localhost:3000/_next/webpack-hmr?id=lZJLZUhNy1VMC7PlW0_rt' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_client_0fhqo1d._.js:13299
