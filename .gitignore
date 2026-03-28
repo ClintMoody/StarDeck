@@ -52,3 +52,4 @@ next-env.d.ts
 # StarDeck
 stardeck-repos/
 .superpowers/
+.playwright-mcp/
