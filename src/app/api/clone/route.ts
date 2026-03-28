@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { processManager } from "@/lib/process-manager";
-import { getRepoByFullName, upsertRepoLocalState } from "@/lib/queries";
+import { getRepoByFullName, upsertRepoLocalState, getSetting } from "@/lib/queries";
 import { detectProjectType } from "@/lib/recipe-detector";
 import { upsertRepoRecipe } from "@/lib/queries";
 import { getLocalVersionInfo } from "@/lib/version-check-local";
@@ -11,24 +11,35 @@ import { eq, and, inArray } from "drizzle-orm";
 import path from "path";
 import fs from "fs";
 
-const CLONE_DIR = process.env.CLONE_DIRECTORY?.replace("~", process.env.HOME ?? "") ?? path.join(process.env.HOME ?? "", "stardeck-repos");
+function getDefaultCloneDir(): string {
+  // Priority: DB setting > env var > fallback
+  const dbSetting = getSetting("clone_directory");
+  if (dbSetting) return dbSetting.replace("~", process.env.HOME ?? "");
+  if (process.env.CLONE_DIRECTORY) return process.env.CLONE_DIRECTORY.replace("~", process.env.HOME ?? "");
+  return path.join(process.env.HOME ?? "", "stardeck-repos");
+}
 
 export async function POST(request: NextRequest) {
   const session = await auth();
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const { owner, name } = await request.json();
+  const { owner, name, targetDir: customDir } = await request.json();
   if (!owner || !name) return NextResponse.json({ error: "Missing owner or name" }, { status: 400 });
 
   const repo = getRepoByFullName(owner, name);
   if (!repo) return NextResponse.json({ error: "Repo not found" }, { status: 404 });
 
-  // Ensure clone directory exists
-  if (!fs.existsSync(CLONE_DIR)) {
-    fs.mkdirSync(CLONE_DIR, { recursive: true });
+  // Use custom directory if provided, otherwise default
+  const baseDir = customDir
+    ? customDir.replace("~", process.env.HOME ?? "")
+    : getDefaultCloneDir();
+
+  // Ensure base directory exists
+  if (!fs.existsSync(baseDir)) {
+    fs.mkdirSync(baseDir, { recursive: true });
   }
 
-  const targetDir = path.join(CLONE_DIR, `${owner}--${name}`);
+  const targetDir = path.join(baseDir, `${owner}--${name}`);
 
   // Check if already cloned
   if (fs.existsSync(targetDir)) {

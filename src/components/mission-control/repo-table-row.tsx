@@ -1,11 +1,13 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { StageDropdown } from './stage-dropdown';
 import { WatchLevelDropdown } from './watch-level-dropdown';
 import { OverflowMenu } from './overflow-menu';
 import { compareVersions, formatVersionDisplay } from '@/lib/version-check';
+
+interface BrowseFolder { name: string; path: string; }
 
 interface RepoRowData {
   repo: {
@@ -85,6 +87,58 @@ export function RepoTableRow({ data, selected, onSelect, onOpenDetail, gridTempl
 
   const [actionError, setActionError] = useState<string | null>(null);
   const [hasConflict, setHasConflict] = useState(false);
+  const [clonePopover, setClonePopover] = useState(false);
+  const [cloneDir, setCloneDir] = useState('');
+  const [cloneBrowsing, setCloneBrowsing] = useState(false);
+  const [browseFolders, setBrowseFolders] = useState<BrowseFolder[]>([]);
+  const [browseDir, setBrowseDir] = useState('');
+  const [browseParent, setBrowseParent] = useState('');
+  const popoverRef = useRef<HTMLDivElement>(null);
+
+  // Close popover on outside click
+  useEffect(() => {
+    if (!clonePopover) return;
+    function handleClick(e: MouseEvent) {
+      if (popoverRef.current && !popoverRef.current.contains(e.target as Node)) {
+        setClonePopover(false);
+        setCloneBrowsing(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, [clonePopover]);
+
+  async function openClonePopover() {
+    // Fetch default clone directory from settings
+    const res = await fetch('/api/settings');
+    const settings = await res.json();
+    const defaultDir = settings.clone_directory || '~/stardeck-repos';
+    setCloneDir(defaultDir);
+    setCloneBrowsing(false);
+    setClonePopover(true);
+  }
+
+  async function openCloneBrowser(dir?: string) {
+    const params = dir ? `?dir=${encodeURIComponent(dir)}` : '';
+    const res = await fetch(`/api/scan/browse${params}`);
+    const data = await res.json();
+    if (data.error) return;
+    setBrowseDir(data.current);
+    setBrowseParent(data.parent);
+    setBrowseFolders(data.folders);
+    setCloneBrowsing(true);
+  }
+
+  function selectCloneDir(dir: string) {
+    setCloneDir(dir);
+    setCloneBrowsing(false);
+  }
+
+  function confirmClone() {
+    setClonePopover(false);
+    setCloneBrowsing(false);
+    callApi('/api/clone', { owner: repo.owner, name: repo.name, targetDir: cloneDir || undefined });
+  }
 
   async function callApi(endpoint: string, body: Record<string, unknown>) {
     setActionError(null);
@@ -119,8 +173,11 @@ export function RepoTableRow({ data, selected, onSelect, onOpenDetail, gridTempl
   }
 
   function handlePrimaryAction() {
-    const endpoint = !isCloned ? '/api/clone'
-      : isOutdated ? '/api/update-repo'
+    if (!isCloned) {
+      openClonePopover();
+      return;
+    }
+    const endpoint = isOutdated ? '/api/update-repo'
       : isRunning ? '/api/stop'
       : '/api/run';
     callApi(endpoint, { owner: repo.owner, name: repo.name });
@@ -200,7 +257,7 @@ export function RepoTableRow({ data, selected, onSelect, onOpenDetail, gridTempl
         {diskDisplay}
       </div>
 
-      <div className="py-2 flex gap-1 items-center flex-wrap">
+      <div className="py-2 flex gap-1 items-center flex-wrap relative">
         {actionError && (
           <span className="text-[10px] text-[#f85149] w-full mb-1" title={actionError}>
             {actionError}
@@ -228,6 +285,77 @@ export function RepoTableRow({ data, selected, onSelect, onOpenDetail, gridTempl
         >
           {primaryLabel}
         </button>
+        {clonePopover && (
+          <div ref={popoverRef} className="absolute top-full left-0 z-50 mt-1 w-80 bg-[#161b22] border border-[#30363d] rounded-lg shadow-xl">
+            <div className="px-3 py-2 border-b border-[#21262d]">
+              <div className="text-[11px] text-[#8b949e] mb-1">Clone to:</div>
+              <div className="flex gap-1">
+                <input
+                  type="text"
+                  value={cloneDir}
+                  onChange={e => setCloneDir(e.target.value)}
+                  className="flex-1 bg-[#0d1117] border border-[#30363d] text-[#c9d1d9] px-2 py-1 rounded text-[11px] font-mono focus:outline-none focus:border-[#1f6feb]"
+                />
+                <button
+                  onClick={() => openCloneBrowser(cloneDir || undefined)}
+                  className="text-[10px] px-2 py-1 rounded border border-[#30363d] bg-[#21262d] text-[#c9d1d9] hover:bg-[#30363d]"
+                >
+                  Browse
+                </button>
+              </div>
+            </div>
+            {cloneBrowsing && (
+              <div className="border-b border-[#21262d]">
+                <div className="flex items-center gap-2 px-3 py-1.5 bg-[#0d1117]">
+                  <button
+                    onClick={() => openCloneBrowser(browseParent)}
+                    disabled={browseDir === browseParent}
+                    className="text-[10px] text-[#58a6ff] hover:underline disabled:text-[#484f58]"
+                  >
+                    Up
+                  </button>
+                  <span className="text-[10px] text-[#8b949e] font-mono truncate flex-1" title={browseDir}>{browseDir}</span>
+                  <button
+                    onClick={() => selectCloneDir(browseDir)}
+                    className="text-[10px] px-1.5 py-0.5 rounded bg-[#238636] text-white hover:bg-[#2ea043]"
+                  >
+                    Use
+                  </button>
+                </div>
+                <div className="max-h-32 overflow-y-auto">
+                  {browseFolders.length === 0 ? (
+                    <div className="text-[10px] text-[#484f58] px-3 py-2">No subfolders.</div>
+                  ) : (
+                    browseFolders.map(f => (
+                      <button
+                        key={f.path}
+                        onClick={() => openCloneBrowser(f.path)}
+                        className="w-full text-left px-3 py-1 text-[11px] text-[#c9d1d9] hover:bg-[#21262d] flex items-center gap-1.5"
+                      >
+                        <span className="text-[#484f58]">📁</span>
+                        {f.name}
+                      </button>
+                    ))
+                  )}
+                </div>
+              </div>
+            )}
+            <div className="flex gap-1 px-3 py-2">
+              <button
+                onClick={confirmClone}
+                className="text-[10px] px-3 py-1 rounded bg-[#238636] text-white hover:bg-[#2ea043]"
+              >
+                Clone Here
+              </button>
+              <button
+                onClick={() => { setClonePopover(false); setCloneBrowsing(false); }}
+                className="text-[10px] px-2 py-1 rounded bg-[#21262d] text-[#8b949e] hover:bg-[#30363d]"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
         {isCloned && !isRunning && primaryLabel !== 'Run' && (
           <button
             onClick={() => fetch('/api/run', {
