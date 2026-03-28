@@ -45,7 +45,7 @@ export function PipelineBar({ stageCounts, totalCount, activeStage, stages }: Pi
     : FALLBACK_STAGES;
 
   return (
-    <div className="flex gap-0.5 px-5 py-3 bg-[#0d1117] border-b border-[#21262d]">
+    <div className="flex gap-0.5 px-5 py-3 bg-[#0d1117] flex-1">
       {displayStages.map((stage) => {
         const count = stage.key === null ? totalCount : (stageCounts[stage.key] || 0);
         const isActive = activeStage === stage.key;

@@ -4,7 +4,9 @@ import { getMissionControlRepos, getStageCounts, getAllCollections, getCollectio
 import { PipelineBar } from '@/components/mission-control/pipeline-bar';
 import { MCSidebar } from '@/components/mission-control/mc-sidebar';
 import { RepoTable } from '@/components/mission-control/repo-table';
+import { KanbanBoard } from '@/components/mission-control/kanban-board';
 import { DashboardHeader } from '@/components/dashboard/header';
+import { MCViewToggle } from '@/components/mission-control/mc-view-toggle';
 import { db } from '@/lib/db';
 import { repoCategories } from '@/lib/db/schema';
 
@@ -17,6 +19,8 @@ export default async function MissionControlPage({
   if (!session) redirect('/login');
 
   const params = await searchParams;
+
+  const view = params.view === 'kanban' ? 'kanban' : 'table';
 
   const filters: MissionControlFilters = {
     stage: params.stage || undefined,
@@ -67,32 +71,39 @@ export default async function MissionControlPage({
         lastSyncTime={lastSyncTime}
       />
 
-      <PipelineBar
-        stageCounts={stageCountMap}
-        totalCount={totalCount}
-        activeStage={filters.stage || null}
-        stages={stages}
-      />
-
-      <div className="flex min-h-[calc(100vh-140px)]">
-        <MCSidebar
-          collections={collectionsWithCounts}
-          savedViews={savedViews}
-          tags={tags}
-          activeFilters={filters}
-          categories={allCategories}
-          categoryCounts={categoryCountMap}
-        />
-        <RepoTable
-          repos={repos}
-          filters={filters}
-          totalCount={repos.length}
+      <div className="flex items-center border-b border-[#21262d]">
+        <PipelineBar
+          stageCounts={stageCountMap}
+          totalCount={totalCount}
           activeStage={filters.stage || null}
           stages={stages}
-          categories={allCategories}
-          repoCategoryMap={repoCatMap}
         />
+        <MCViewToggle currentView={view} />
       </div>
+
+      {view === 'kanban' ? (
+        <KanbanBoard stages={stages} repos={repos} />
+      ) : (
+        <div className="flex min-h-[calc(100vh-140px)]">
+          <MCSidebar
+            collections={collectionsWithCounts}
+            savedViews={savedViews}
+            tags={tags}
+            activeFilters={filters}
+            categories={allCategories}
+            categoryCounts={categoryCountMap}
+          />
+          <RepoTable
+            repos={repos}
+            filters={filters}
+            totalCount={repos.length}
+            activeStage={filters.stage || null}
+            stages={stages}
+            categories={allCategories}
+            repoCategoryMap={repoCatMap}
+          />
+        </div>
+      )}
     </div>
   );
 }
