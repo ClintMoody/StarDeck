@@ -286,73 +286,76 @@ export function RepoTableRow({ data, selected, onSelect, onOpenDetail, gridTempl
           {primaryLabel}
         </button>
         {clonePopover && (
-          <div ref={popoverRef} className="absolute top-full left-0 z-50 mt-1 w-80 bg-[#161b22] border border-[#30363d] rounded-lg shadow-xl">
-            <div className="px-3 py-2 border-b border-[#21262d]">
-              <div className="text-[11px] text-[#8b949e] mb-1">Clone to:</div>
-              <div className="flex gap-1">
-                <input
-                  type="text"
-                  value={cloneDir}
-                  onChange={e => setCloneDir(e.target.value)}
-                  className="flex-1 bg-[#0d1117] border border-[#30363d] text-[#c9d1d9] px-2 py-1 rounded text-[11px] font-mono focus:outline-none focus:border-[#1f6feb]"
-                />
+          <div className="fixed inset-0 z-50 flex items-center justify-center">
+            <div className="absolute inset-0 bg-black/60" onClick={() => { setClonePopover(false); setCloneBrowsing(false); }} />
+            <div ref={popoverRef} className="relative w-[480px] bg-[#161b22] border border-[#30363d] rounded-xl shadow-2xl overflow-hidden">
+              <div className="px-4 py-3 border-b border-[#21262d]">
+                <div className="text-sm text-[#c9d1d9] font-semibold mb-0.5">Clone {repo.fullName}</div>
+                <div className="text-xs text-[#8b949e]">Choose where to save this repo</div>
+              </div>
+              <div className="px-4 py-3 border-b border-[#21262d]">
+                <div className="flex gap-2">
+                  <span className="flex-1 bg-[#0d1117] border border-[#30363d] text-[#c9d1d9] px-3 py-1.5 rounded-lg text-xs font-mono truncate" title={cloneDir}>
+                    {cloneDir}
+                  </span>
+                  <button
+                    onClick={() => openCloneBrowser(cloneDir || undefined)}
+                    className="text-xs px-3 py-1.5 rounded-lg border border-[#30363d] bg-[#21262d] text-[#c9d1d9] hover:bg-[#30363d] transition-colors"
+                  >
+                    Browse
+                  </button>
+                </div>
+              </div>
+              {cloneBrowsing && (
+                <div className="border-b border-[#21262d]">
+                  <div className="flex items-center gap-2 px-4 py-2 bg-[#0d1117]">
+                    <button
+                      onClick={() => openCloneBrowser(browseParent)}
+                      disabled={browseDir === browseParent}
+                      className="text-xs text-[#58a6ff] hover:underline disabled:text-[#484f58]"
+                    >
+                      Up
+                    </button>
+                    <span className="text-xs text-[#8b949e] font-mono truncate flex-1" title={browseDir}>{browseDir}</span>
+                    <button
+                      onClick={() => selectCloneDir(browseDir)}
+                      className="text-xs px-2 py-0.5 rounded bg-[#238636] text-white hover:bg-[#2ea043]"
+                    >
+                      Use
+                    </button>
+                  </div>
+                  <div className="max-h-48 overflow-y-auto">
+                    {browseFolders.length === 0 ? (
+                      <div className="text-xs text-[#484f58] px-4 py-4 text-center">No subfolders.</div>
+                    ) : (
+                      browseFolders.map(f => (
+                        <button
+                          key={f.path}
+                          onClick={() => openCloneBrowser(f.path)}
+                          className="w-full text-left px-4 py-1.5 text-sm text-[#c9d1d9] hover:bg-[#21262d] flex items-center gap-2 transition-colors"
+                        >
+                          <span className="text-[#484f58]">📁</span>
+                          {f.name}
+                        </button>
+                      ))
+                    )}
+                  </div>
+                </div>
+              )}
+              <div className="flex justify-end gap-2 px-4 py-3 bg-[#0d1117]">
                 <button
-                  onClick={() => openCloneBrowser(cloneDir || undefined)}
-                  className="text-[10px] px-2 py-1 rounded border border-[#30363d] bg-[#21262d] text-[#c9d1d9] hover:bg-[#30363d]"
+                  onClick={() => { setClonePopover(false); setCloneBrowsing(false); }}
+                  className="text-sm text-[#8b949e] hover:text-[#c9d1d9] px-3 py-1.5 rounded transition-colors"
                 >
-                  Browse
+                  Cancel
+                </button>
+                <button
+                  onClick={confirmClone}
+                  className="text-sm px-4 py-1.5 rounded-lg bg-[#238636] text-white hover:bg-[#2ea043] transition-colors"
+                >
+                  Clone Here
                 </button>
               </div>
-            </div>
-            {cloneBrowsing && (
-              <div className="border-b border-[#21262d]">
-                <div className="flex items-center gap-2 px-3 py-1.5 bg-[#0d1117]">
-                  <button
-                    onClick={() => openCloneBrowser(browseParent)}
-                    disabled={browseDir === browseParent}
-                    className="text-[10px] text-[#58a6ff] hover:underline disabled:text-[#484f58]"
-                  >
-                    Up
-                  </button>
-                  <span className="text-[10px] text-[#8b949e] font-mono truncate flex-1" title={browseDir}>{browseDir}</span>
-                  <button
-                    onClick={() => selectCloneDir(browseDir)}
-                    className="text-[10px] px-1.5 py-0.5 rounded bg-[#238636] text-white hover:bg-[#2ea043]"
-                  >
-                    Use
-                  </button>
-                </div>
-                <div className="max-h-32 overflow-y-auto">
-                  {browseFolders.length === 0 ? (
-                    <div className="text-[10px] text-[#484f58] px-3 py-2">No subfolders.</div>
-                  ) : (
-                    browseFolders.map(f => (
-                      <button
-                        key={f.path}
-                        onClick={() => openCloneBrowser(f.path)}
-                        className="w-full text-left px-3 py-1 text-[11px] text-[#c9d1d9] hover:bg-[#21262d] flex items-center gap-1.5"
-                      >
-                        <span className="text-[#484f58]">📁</span>
-                        {f.name}
-                      </button>
-                    ))
-                  )}
-                </div>
-              </div>
-            )}
-            <div className="flex gap-1 px-3 py-2">
-              <button
-                onClick={confirmClone}
-                className="text-[10px] px-3 py-1 rounded bg-[#238636] text-white hover:bg-[#2ea043]"
-              >
-                Clone Here
-              </button>
-              <button
-                onClick={() => { setClonePopover(false); setCloneBrowsing(false); }}
-                className="text-[10px] px-2 py-1 rounded bg-[#21262d] text-[#8b949e] hover:bg-[#30363d]"
-              >
-                Cancel
-              </button>
             </div>
           </div>
         )}

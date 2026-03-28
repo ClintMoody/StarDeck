@@ -49,13 +49,10 @@ export function GeneralSettings({ initialSettings }: GeneralSettingsProps) {
 
       <div>
         <label className="text-sm text-gray-400 block mb-1">Clone Directory</label>
-        <div className="flex gap-2 items-start">
-          <input
-            type="text"
-            value={settings.clone_directory ?? "~/stardeck-repos"}
-            onChange={(e) => save("clone_directory", e.target.value)}
-            className="w-96 bg-gray-900 border border-gray-800 rounded-lg px-3 py-2 text-sm text-gray-300 font-mono focus:outline-none focus:border-blue-700"
-          />
+        <div className="flex gap-2 items-center">
+          <span className="bg-gray-900 border border-gray-800 rounded-lg px-3 py-2 text-sm text-gray-300 font-mono flex-1 max-w-md truncate" title={settings.clone_directory ?? "~/stardeck-repos"}>
+            {settings.clone_directory ?? "~/stardeck-repos"}
+          </span>
           <button
             onClick={() => openBrowser(settings.clone_directory || undefined)}
             className="px-3 py-2 text-sm bg-gray-800 border border-gray-700 rounded-lg text-gray-300 hover:bg-gray-700 transition-colors flex-shrink-0"
@@ -64,44 +61,49 @@ export function GeneralSettings({ initialSettings }: GeneralSettingsProps) {
           </button>
         </div>
         {browsing && (
-          <div className="mt-2 w-[500px] bg-gray-900 border border-gray-800 rounded-lg overflow-hidden">
-            <div className="flex items-center gap-2 px-3 py-2 border-b border-gray-800 bg-gray-950">
-              <button
-                onClick={() => openBrowser(browseParent)}
-                disabled={browseDir === browseParent}
-                className="text-xs text-blue-400 hover:underline disabled:text-gray-600 disabled:no-underline"
-              >
-                Up
-              </button>
-              <span className="text-xs text-gray-300 font-mono truncate flex-1" title={browseDir}>{browseDir}</span>
-              <button
-                onClick={() => selectDir(browseDir)}
-                className="bg-blue-600 text-white text-xs px-2.5 py-1 rounded hover:bg-blue-700 flex-shrink-0"
-              >
-                Select This Folder
-              </button>
-              <button
-                onClick={() => setBrowsing(false)}
-                className="text-xs text-gray-500 hover:text-gray-300 px-1"
-              >
-                Cancel
-              </button>
-            </div>
-            <div className="max-h-48 overflow-y-auto">
-              {browseFolders.length === 0 ? (
-                <div className="text-xs text-gray-600 px-3 py-3">No subfolders found.</div>
-              ) : (
-                browseFolders.map(folder => (
-                  <button
-                    key={folder.path}
-                    onClick={() => openBrowser(folder.path)}
-                    className="w-full text-left px-3 py-1.5 text-sm text-gray-300 hover:bg-gray-800 flex items-center gap-2"
-                  >
-                    <span className="text-gray-500">📁</span>
-                    {folder.name}
-                  </button>
-                ))
-              )}
+          <div className="fixed inset-0 z-50 flex items-center justify-center">
+            <div className="absolute inset-0 bg-black/60" onClick={() => setBrowsing(false)} />
+            <div className="relative w-[520px] bg-gray-900 border border-gray-700 rounded-xl shadow-2xl overflow-hidden">
+              <div className="flex items-center gap-2 px-4 py-3 border-b border-gray-800 bg-gray-950">
+                <button
+                  onClick={() => openBrowser(browseParent)}
+                  disabled={browseDir === browseParent}
+                  className="text-xs text-blue-400 hover:underline disabled:text-gray-600 disabled:no-underline"
+                >
+                  Up
+                </button>
+                <span className="text-sm text-gray-300 font-mono truncate flex-1" title={browseDir}>{browseDir}</span>
+              </div>
+              <div className="max-h-72 overflow-y-auto">
+                {browseFolders.length === 0 ? (
+                  <div className="text-sm text-gray-600 px-4 py-6 text-center">No subfolders found.</div>
+                ) : (
+                  browseFolders.map(folder => (
+                    <button
+                      key={folder.path}
+                      onClick={() => openBrowser(folder.path)}
+                      className="w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-gray-800 flex items-center gap-2 transition-colors"
+                    >
+                      <span className="text-gray-500">📁</span>
+                      {folder.name}
+                    </button>
+                  ))
+                )}
+              </div>
+              <div className="flex justify-end gap-2 px-4 py-3 border-t border-gray-800 bg-gray-950">
+                <button
+                  onClick={() => setBrowsing(false)}
+                  className="text-sm text-gray-400 hover:text-gray-200 px-3 py-1.5 rounded transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => selectDir(browseDir)}
+                  className="bg-blue-600 text-white text-sm px-4 py-1.5 rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  Select This Folder
+                </button>
+              </div>
             </div>
           </div>
         )}
