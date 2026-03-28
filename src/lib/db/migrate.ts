@@ -6,7 +6,8 @@ export function runMigrations() {
     migrate(db, { migrationsFolder: "drizzle" });
   } catch (e: any) {
     // Ignore "already exists" errors from concurrent build processes
-    if (!e?.cause?.message?.includes('already exists')) {
+    const msg = e?.cause?.message || e?.message || '';
+    if (!msg.includes('already exists') && !msg.includes('duplicate column')) {
       throw e;
     }
   }

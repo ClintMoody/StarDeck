@@ -1,5 +1,3 @@
-import { execSync } from "child_process";
-
 export interface VersionInput {
   localTag: string | null;
   localSha: string | null;
@@ -90,33 +88,5 @@ export function formatVersionDisplay(result: VersionResult): string {
   }
 }
 
-/** Read local git version info from a cloned repo path */
-export function getLocalVersionInfo(
-  clonePath: string
-): { sha: string | null; tag: string | null } {
-  let sha: string | null = null;
-  let tag: string | null = null;
-
-  try {
-    sha = execSync("git rev-parse HEAD", {
-      cwd: clonePath,
-      encoding: "utf-8",
-      stdio: ["pipe", "pipe", "pipe"],
-    }).trim();
-  } catch {
-    // not a git repo or other error
-  }
-
-  try {
-    tag = execSync("git describe --tags --exact-match 2>/dev/null", {
-      cwd: clonePath,
-      encoding: "utf-8",
-      stdio: ["pipe", "pipe", "pipe"],
-    }).trim();
-    if (!tag) tag = null;
-  } catch {
-    // no tag at current commit
-  }
-
-  return { sha, tag };
-}
+// getLocalVersionInfo has been moved to version-check-local.ts
+// to keep this module client-safe (no child_process dependency)

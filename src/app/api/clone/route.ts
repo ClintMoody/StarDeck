@@ -4,7 +4,7 @@ import { processManager } from "@/lib/process-manager";
 import { getRepoByFullName, upsertRepoLocalState } from "@/lib/queries";
 import { detectProjectType } from "@/lib/recipe-detector";
 import { upsertRepoRecipe } from "@/lib/queries";
-import { getLocalVersionInfo } from "@/lib/version-check";
+import { getLocalVersionInfo } from "@/lib/version-check-local";
 import { db } from "@/lib/db";
 import { starredRepos } from "@/lib/db/schema";
 import { eq, and, inArray } from "drizzle-orm";

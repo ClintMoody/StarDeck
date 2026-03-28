@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { getRepoByFullName, getRepoLocalState, upsertRepoLocalState } from '@/lib/queries';
-import { getLocalVersionInfo } from '@/lib/version-check';
+import { getLocalVersionInfo } from '@/lib/version-check-local';
 import { execSync } from 'child_process';
 import fs from 'fs';
 
@@ -9,7 +9,7 @@ export async function POST(req: NextRequest) {
   const session = await auth();
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const { owner, name } = await req.json();
+  const { owner, name, force } = await req.json();
   if (!owner || !name) {
     return NextResponse.json({ error: 'owner and name are required' }, { status: 400 });
   }
@@ -29,23 +29,41 @@ export async function POST(req: NextRequest) {
   const cwd = localState.clonePath;
 
   try {
-    const status = execSync('git status --porcelain', { cwd, encoding: 'utf-8', timeout: 10000 }).trim();
-    const hasChanges = status.length > 0;
-
-    if (hasChanges) {
-      execSync('git stash', { cwd, encoding: 'utf-8', timeout: 10000 });
-      execSync('git pull', { cwd, encoding: 'utf-8', timeout: 60000 });
-      try {
-        execSync('git stash pop', { cwd, encoding: 'utf-8', timeout: 10000 });
-      } catch {
+    // Check for unmerged files (prior conflict)
+    const unmerged = execSync('git diff --name-only --diff-filter=U', { cwd, encoding: 'utf-8', timeout: 5000 }).trim();
+    if (unmerged) {
+      if (force) {
+        // User chose to discard local changes and reset to remote
+        const branch = execSync('git branch --show-current', { cwd, encoding: 'utf-8', timeout: 5000 }).trim() || 'main';
+        execSync('git reset --hard', { cwd, encoding: 'utf-8', timeout: 10000 });
+        execSync(`git pull origin ${branch}`, { cwd, encoding: 'utf-8', timeout: 60000 });
+      } else {
         return NextResponse.json({
-          ok: true,
-          warning: 'Pull succeeded but stash pop had conflicts. Resolve manually.',
-          stashConflict: true,
-        });
+          error: 'Merge conflict',
+          detail: `Unresolved conflicts in: ${unmerged.split('\n').join(', ')}. Choose an option below.`,
+          conflictFiles: unmerged.split('\n'),
+          actions: ['force_pull', 'skip'],
+        }, { status: 409 });
       }
     } else {
-      execSync('git pull', { cwd, encoding: 'utf-8', timeout: 60000 });
+      const status = execSync('git status --porcelain', { cwd, encoding: 'utf-8', timeout: 10000 }).trim();
+      const hasChanges = status.length > 0;
+
+      if (hasChanges) {
+        execSync('git stash', { cwd, encoding: 'utf-8', timeout: 10000 });
+        execSync('git pull', { cwd, encoding: 'utf-8', timeout: 60000 });
+        try {
+          execSync('git stash pop', { cwd, encoding: 'utf-8', timeout: 10000 });
+        } catch {
+          return NextResponse.json({
+            ok: true,
+            warning: 'Pull succeeded but stash pop had conflicts. Resolve manually.',
+            stashConflict: true,
+          });
+        }
+      } else {
+        execSync('git pull', { cwd, encoding: 'utf-8', timeout: 60000 });
+      }
     }
 
     const versionInfo = getLocalVersionInfo(cwd);
@@ -59,7 +77,6 @@ export async function POST(req: NextRequest) {
       ok: true,
       localVersion: versionInfo.sha?.substring(0, 7),
       localTag: versionInfo.tag,
-      hadLocalChanges: hasChanges,
     });
   } catch (e: any) {
     return NextResponse.json({ error: `Pull failed: ${e.message}` }, { status: 500 });

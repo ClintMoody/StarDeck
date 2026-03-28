@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { getRepoByFullName, getRepoLocalState } from '@/lib/queries';
-import { getLocalVersionInfo, compareVersions, formatVersionDisplay } from '@/lib/version-check';
+import { getLocalVersionInfo } from '@/lib/version-check-local';
+import { compareVersions, formatVersionDisplay } from '@/lib/version-check';
 
 export async function GET(req: NextRequest) {
   const session = await auth();
@@ -30,7 +31,7 @@ export async function GET(req: NextRequest) {
     localTag,
     localSha,
     latestRelease: repo.lastReleaseVersion || null,
-    latestRemoteSha: null,
+    latestRemoteSha: repo.latestRemoteSha || null,
   });
 
   return NextResponse.json({

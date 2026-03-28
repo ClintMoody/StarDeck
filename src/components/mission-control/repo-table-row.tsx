@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { StageDropdown } from './stage-dropdown';
 import { WatchLevelDropdown } from './watch-level-dropdown';
@@ -82,37 +83,51 @@ export function RepoTableRow({ data, selected, onSelect, onOpenDetail, gridTempl
     ? timeAgo(new Date(repo.lastCommitAt))
     : '—';
 
-  // Primary action
-  async function handlePrimaryAction() {
-    if (!isCloned) {
-      await fetch('/api/clone', {
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [hasConflict, setHasConflict] = useState(false);
+
+  async function callApi(endpoint: string, body: Record<string, unknown>) {
+    setActionError(null);
+    setHasConflict(false);
+    try {
+      const res = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ owner: repo.owner, name: repo.name }),
+        body: JSON.stringify(body),
       });
+      const data = await res.json();
+      if (res.status === 409 && data.actions) {
+        // Conflict — show error with force option
+        setActionError(data.detail || data.error);
+        setHasConflict(true);
+        return;
+      }
+      if (!res.ok) {
+        setActionError(data.error || `Failed (${res.status})`);
+        setTimeout(() => setActionError(null), 8000);
+        return;
+      }
+      if (data.warning) {
+        setActionError(data.warning);
+        setTimeout(() => setActionError(null), 8000);
+      }
       router.refresh();
-    } else if (isOutdated) {
-      await fetch('/api/update-repo', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ owner: repo.owner, name: repo.name }),
-      });
-      router.refresh();
-    } else if (isRunning) {
-      await fetch('/api/stop', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ owner: repo.owner, name: repo.name }),
-      });
-      router.refresh();
-    } else {
-      await fetch('/api/run', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ owner: repo.owner, name: repo.name }),
-      });
-      router.refresh();
+    } catch (e: any) {
+      setActionError(e.message || 'Network error');
+      setTimeout(() => setActionError(null), 8000);
     }
+  }
+
+  function handlePrimaryAction() {
+    const endpoint = !isCloned ? '/api/clone'
+      : isOutdated ? '/api/update-repo'
+      : isRunning ? '/api/stop'
+      : '/api/run';
+    callApi(endpoint, { owner: repo.owner, name: repo.name });
+  }
+
+  function handleForcePull() {
+    callApi('/api/update-repo', { owner: repo.owner, name: repo.name, force: true });
   }
 
   let primaryLabel = 'Clone';
@@ -185,7 +200,28 @@ export function RepoTableRow({ data, selected, onSelect, onOpenDetail, gridTempl
         {diskDisplay}
       </div>
 
-      <div className="py-2 flex gap-1 items-center">
+      <div className="py-2 flex gap-1 items-center flex-wrap">
+        {actionError && (
+          <span className="text-[10px] text-[#f85149] w-full mb-1" title={actionError}>
+            {actionError}
+          </span>
+        )}
+        {hasConflict && (
+          <div className="flex gap-1 w-full mb-1">
+            <button
+              onClick={handleForcePull}
+              className="text-[10px] px-2 py-0.5 rounded bg-[#da3633] text-white hover:bg-[#f85149]"
+            >
+              Force Pull (discard local)
+            </button>
+            <button
+              onClick={() => { setActionError(null); setHasConflict(false); }}
+              className="text-[10px] px-2 py-0.5 rounded bg-[#21262d] text-[#8b949e] hover:bg-[#30363d]"
+            >
+              Skip
+            </button>
+          </div>
+        )}
         <button
           onClick={handlePrimaryAction}
           className={`text-[10px] px-2 py-0.5 rounded text-white transition-opacity ${primaryColor} ${!isCloned && !isOutdated ? 'opacity-60 hover:opacity-100' : ''}`}

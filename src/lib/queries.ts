@@ -14,27 +14,29 @@ export interface RepoFilters {
 }
 
 export function getFilteredRepos(filters: RepoFilters = {}) {
-  let query = db
-    .select()
-    .from(starredRepos)
-    .where(eq(starredRepos.unstarred, false))
-    .$dynamic();
+  const conditions: SQL[] = [eq(starredRepos.unstarred, false)];
 
   if (filters.search) {
     const term = `%${filters.search}%`;
-    query = query.where(
+    conditions.push(
       or(
         like(starredRepos.fullName, term),
         like(starredRepos.description, term),
         like(starredRepos.language, term),
         like(starredRepos.topics, term)
-      )
+      )!
     );
   }
 
   if (filters.language) {
-    query = query.where(eq(starredRepos.language, filters.language));
+    conditions.push(eq(starredRepos.language, filters.language));
   }
+
+  let query = db
+    .select()
+    .from(starredRepos)
+    .where(and(...conditions))
+    .$dynamic();
 
   // Sort
   switch (filters.sort) {
@@ -340,23 +342,17 @@ export interface MissionControlFilters {
 }
 
 export function getMissionControlRepos(filters: MissionControlFilters = {}) {
-  let query = db.select({
-    repo: starredRepos,
-    localState: repoLocalState,
-  })
-  .from(starredRepos)
-  .leftJoin(repoLocalState, eq(repoLocalState.repoId, starredRepos.id))
-  .$dynamic();
+  const conditions: SQL[] = [eq(starredRepos.unstarred, false)];
 
   if (filters.stage) {
-    query = query.where(eq(starredRepos.workflowStage, filters.stage));
+    conditions.push(eq(starredRepos.workflowStage, filters.stage));
   }
   if (filters.watchLevel) {
-    query = query.where(eq(starredRepos.watchLevel, filters.watchLevel));
+    conditions.push(eq(starredRepos.watchLevel, filters.watchLevel));
   }
   if (filters.search) {
     const term = `%${filters.search}%`;
-    query = query.where(
+    conditions.push(
       or(
         like(starredRepos.fullName, term),
         like(starredRepos.description, term),
@@ -368,14 +364,23 @@ export function getMissionControlRepos(filters: MissionControlFilters = {}) {
     const repoIds = db.select({ repoId: collectionRepos.repoId })
       .from(collectionRepos)
       .where(eq(collectionRepos.collectionId, filters.collectionId));
-    query = query.where(inArray(starredRepos.id, repoIds));
+    conditions.push(inArray(starredRepos.id, repoIds));
   }
   if (filters.tagId) {
     const repoIds = db.select({ repoId: repoTags.repoId })
       .from(repoTags)
       .where(eq(repoTags.tagId, filters.tagId));
-    query = query.where(inArray(starredRepos.id, repoIds));
+    conditions.push(inArray(starredRepos.id, repoIds));
   }
+
+  let query = db.select({
+    repo: starredRepos,
+    localState: repoLocalState,
+  })
+  .from(starredRepos)
+  .leftJoin(repoLocalState, eq(repoLocalState.repoId, starredRepos.id))
+  .where(and(...conditions))
+  .$dynamic();
 
   // Sort
   switch (filters.sort) {
@@ -406,6 +411,7 @@ export function getStageCounts() {
     count: count(),
   })
   .from(starredRepos)
+  .where(eq(starredRepos.unstarred, false))
   .groupBy(starredRepos.workflowStage)
   .all();
 }

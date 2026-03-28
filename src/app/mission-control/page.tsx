@@ -51,19 +51,6 @@ export default async function MissionControlPage({
         lastSyncTime={lastSyncTime}
       />
 
-      {/* Navigation tabs */}
-      <div className="flex items-center gap-4 px-5 py-2 border-b border-[#21262d] bg-[#161b22]">
-        <a href="/" className="text-sm text-[#8b949e] hover:text-[#c9d1d9] px-3 py-1 rounded-md">
-          Home
-        </a>
-        <span className="text-sm text-[#f0f6fc] px-3 py-1 rounded-md bg-[#1f6feb]">
-          Mission Control
-        </span>
-        <a href="/settings" className="text-sm text-[#8b949e] hover:text-[#c9d1d9] px-3 py-1 rounded-md">
-          Settings
-        </a>
-      </div>
-
       <PipelineBar
         stageCounts={stageCountMap}
         totalCount={totalCount}

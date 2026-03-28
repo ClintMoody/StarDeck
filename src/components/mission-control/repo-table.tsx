@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useTransition } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { RepoTableRow } from './repo-table-row';
 import { BulkActionBar } from './bulk-action-bar';
@@ -53,6 +53,8 @@ export function RepoTable({ repos, filters, totalCount, activeStage }: RepoTable
   const router = useRouter();
   const searchParams = useSearchParams();
   const resizingRef = useRef<{ colIndex: number; startX: number; startWidth: number } | null>(null);
+  const [isChecking, startCheckTransition] = useTransition();
+  const [checkResult, setCheckResult] = useState<string | null>(null);
 
   const toggleSelect = useCallback((id: number) => {
     setSelectedIds(prev => {
@@ -119,6 +121,23 @@ export function RepoTable({ repos, filters, totalCount, activeStage }: RepoTable
   const totalDiskBytes = repos.reduce((sum, r) => sum + (r.localState?.diskUsageBytes || 0), 0);
   const clonedCount = repos.filter(r => r.localState?.clonePath).length;
 
+  function handleCheckUpdates() {
+    setCheckResult(null);
+    startCheckTransition(async () => {
+      const res = await fetch('/api/check-updates', { method: 'POST' });
+      const data = await res.json();
+      if (data.checked === 0) {
+        setCheckResult('No cloned repos to check');
+      } else if (data.updated === 0) {
+        setCheckResult(`All ${data.checked} repos up to date`);
+      } else {
+        setCheckResult(`${data.updated} of ${data.checked} repos have updates`);
+      }
+      router.refresh();
+      setTimeout(() => setCheckResult(null), 5000);
+    });
+  }
+
   // Empty state for specific pipeline tabs
   const emptyState = activeStage && EMPTY_STATE_MESSAGES[activeStage];
 
@@ -133,6 +152,18 @@ export function RepoTable({ repos, filters, totalCount, activeStage }: RepoTable
           onKeyDown={e => e.key === 'Enter' && handleSearch((e.target as HTMLInputElement).value)}
           className="bg-[#0d1117] border border-[#30363d] text-[#c9d1d9] px-2.5 py-1 rounded-md text-xs w-56"
         />
+
+        <button
+          onClick={handleCheckUpdates}
+          disabled={isChecking}
+          className="text-[11px] px-2.5 py-1 rounded-md border border-[#30363d] bg-[#21262d] text-[#c9d1d9] hover:bg-[#30363d] disabled:opacity-50 disabled:cursor-wait transition-colors"
+        >
+          {isChecking ? 'Checking...' : 'Check Updates'}
+        </button>
+
+        {checkResult && (
+          <span className="text-[11px] text-[#3fb950]">{checkResult}</span>
+        )}
 
         <span className="text-[#8b949e] text-[11px] ml-auto">
           {totalCount} repos
