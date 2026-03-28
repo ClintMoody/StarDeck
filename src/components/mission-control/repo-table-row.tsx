@@ -148,11 +148,11 @@ export function RepoTableRow({ data, selected, onSelect, onOpenDetail, gridTempl
         />
       </div>
 
-      <div className="py-2 min-w-0">
+      <div className="py-2 min-w-0 overflow-hidden">
         <button
           onClick={() => onOpenDetail(repo.owner, repo.name)}
-          className="text-[#58a6ff] font-semibold hover:underline text-left truncate block"
-          title={repo.description || undefined}
+          className="text-[#58a6ff] font-semibold hover:underline text-left truncate block max-w-full"
+          title={repo.fullName + (repo.description ? ` — ${repo.description}` : '')}
         >
           {repo.fullName}
         </button>
