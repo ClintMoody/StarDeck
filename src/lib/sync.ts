@@ -1,4 +1,5 @@
 import { GitHubClient } from "@/lib/github";
+import { runAutoSort } from "@/lib/categories";
 import { starredRepos, repoLocalState, syncLog } from "@/lib/db/schema";
 import { eq, notInArray, isNotNull } from "drizzle-orm";
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
@@ -106,6 +107,13 @@ export async function syncStarredRepos(
           // Skip on error — don't break sync for a single repo
         }
       }
+    }
+
+    // Run auto-sort to assign categories to new/updated repos
+    try {
+      runAutoSort();
+    } catch {
+      // Non-fatal — categories are a convenience feature
     }
 
     // Log the sync
