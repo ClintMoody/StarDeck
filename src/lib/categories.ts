@@ -1,235 +1,132 @@
-/**
- * Auto-categorizes repos based on their topics, description, name, and language.
- * Categories are derived from keyword matching — no AI or external API needed.
- */
-
-interface CategorizedRepo {
-  repoId: number;
-  categories: string[];
-}
-
-interface CategoryDefinition {
-  name: string;
-  icon: string;
-  keywords: string[]; // matched against topics, description, and name (lowercased)
-}
-
-const CATEGORY_DEFINITIONS: CategoryDefinition[] = [
-  {
-    name: "AI & Agents",
-    icon: "🤖",
-    keywords: [
-      // Topic-safe (hyphenated terms match topics exactly)
-      "ai-agent", "ai-agents", "ai-tools", "ai-assistant", "ai-security-tool",
-      "agentic-ai", "agentic-engineering", "agentic-framework", "agentic-workflow",
-      "artificial-intelligence", "machine-learning", "deep-learning",
-      "large-language-models", "llm-inference", "multi-agent", "multi-agent-system",
-      "multi-agent-systems", "autonomous-agents", "swarm-intelligence",
-      "langchain", "langgraph", "llamaindex", "anthropic", "anthropic-claude",
-      "claude-code", "claude-skills", "openclaw", "openclaw-skills",
-      "codex", "codex-skills", "openai",
-      // Word-boundary safe for descriptions
-      "llm", "gpt", "claude", "agentic", "embedding", "transformer",
-      "diffusion", "chatbot", "neural", "generative",
-      // Specific to user's repos
-      "model-context-protocol", "mcp-server", "deep-research",
-      "superagent", "swarm", "mlx",
-    ],
-  },
-  {
-    name: "Security & OSINT",
-    icon: "🔒",
-    keywords: [
-      "security", "hacking", "pentest", "penetration-testing", "penetration-testing-tools",
-      "exploit", "vulnerability", "cve", "ctf", "red-team", "offensive-security",
-      "defensive", "malware", "reverse-engineering", "forensics",
-      "osint", "osint-tool", "osint-resources",
-      "reconnaissance", "bug-bounty", "infosec", "cybersecurity",
-      "security-automation", "security-testing", "security-tools",
-      "ai-security", "dlp", "ssrf-protection", "egress-proxy",
-      "encryption", "aes-256", "cryptography",
-      // User's specific repos
-      "cctv", "cctv-cameras", "sattelite", "sattelite-imagery",
-      "elonjet", "airforce1",
-    ],
-  },
-  {
-    name: "Developer Tools",
-    icon: "🛠️",
-    keywords: [
-      "developer-tools", "devtools", "command-line", "terminal",
-      "linter", "formatter", "bundler", "compiler",
-      "debugger", "profiler", "test-framework", "ci-cd",
-      "version-control", "package-manager", "build-tool",
-      "code-quality", "static-analysis",
-      // Specific to user's repos
-      "claude-code-plugin", "claude-code-skills",
-      "context-engineering", "meta-prompting", "spec-driven-development",
-      "vibe-coding", "coding",
-      "token-savings", "token",
-    ],
-  },
-  {
-    name: "Automation & Browser",
-    icon: "🌐",
-    keywords: [
-      "automation", "browser-automation", "scraping", "scraper", "crawler",
-      "selenium", "puppeteer", "playwright",
-      "web-scraping", "workflow", "orchestration",
-      "browser-use", "browser-automation",
-    ],
-  },
-  {
-    name: "Audio & Music",
-    icon: "🎵",
-    keywords: [
-      "audio", "audio-analysis", "audio-plugin", "audio-visualizer",
-      "music", "vst", "vst3", "juce", "juce-framework", "juce-plugin",
-      "daw", "synthesizer", "midi", "sound",
-      "spectral", "signal", "spl", "acoustics",
-      "sample", "visualizer",
-    ],
-  },
-  {
-    name: "Knowledge & Memory",
-    icon: "📚",
-    keywords: [
-      "knowledge", "knowledge-graph", "notes", "obsidian",
-      "brain", "brain-map", "memory", "ai-memory", "memory-system",
-      "memory-layer", "long-term-memory", "memory-engine",
-      "research", "paper", "arxiv", "academic",
-      "personal-knowledge", "personal-knowledge-management",
-      "open-brain",
-    ],
-  },
-  {
-    name: "Geolocation & Maps",
-    icon: "🗺️",
-    keywords: [
-      "geolocation", "gps", "navigation", "maps", "offline-maps",
-      "mgrs", "military-grid", "land-navigation",
-      "street-level", "satellite", "mapping",
-      "tactical", "hiking", "search-and-rescue",
-    ],
-  },
-  {
-    name: "Mobile & Desktop",
-    icon: "📱",
-    keywords: [
-      "mobile", "ios", "android", "react-native",
-      "flutter", "electron", "tauri", "desktop",
-      "cross-platform", "dart",
-    ],
-  },
-  {
-    name: "Backend & Infra",
-    icon: "⚙️",
-    keywords: [
-      "backend", "server", "graphql", "grpc",
-      "database", "nosql", "redis", "postgres", "mongodb", "supabase",
-      "docker", "kubernetes", "devops", "infrastructure",
-      "aws", "gcp", "azure", "serverless", "microservices",
-      "self-hosted",
-    ],
-  },
-];
+import { db } from '@/lib/db';
+import { dbCategories, repoCategories, starredRepos } from '@/lib/db/schema';
+import { eq, and } from 'drizzle-orm';
 
 export interface CategoryCount {
   name: string;
   icon: string;
   count: number;
+  id: number;
+}
+
+interface AutoRules {
+  keywords: string[];
 }
 
 /**
- * Categorize a single repo based on its metadata.
- * A repo can belong to multiple categories.
- *
- * Matching strategy:
- * - Topics are matched exactly (they're already discrete tags)
- * - Description and name are matched with word boundaries to avoid
- *   false positives like "ai" matching inside "trail"
+ * Categorize a single repo using DB-stored category rules.
+ * Returns the matched category IDs. Falls back to "Other".
  */
-export function categorizeRepo(repo: {
-  topics: string | null;
-  description: string | null;
-  fullName: string;
-  language: string | null;
-}): string[] {
+export function categorizeRepo(
+  repo: { topics: string | null; description: string | null; fullName: string; language: string | null },
+  allCategories: { id: number; name: string; autoRules: string | null }[]
+): number[] {
   const topics: string[] = repo.topics ? JSON.parse(repo.topics) : [];
-  const topicsLower = new Set(topics.map((t) => t.toLowerCase()));
+  const topicsLower = new Set(topics.map(t => t.toLowerCase()));
 
-  // For word-boundary matching on free text
   const freeText = [
-    repo.description ?? "",
-    repo.fullName.replace(/[/\-_]/g, " "),
-    repo.language ?? "",
-  ]
-    .join(" ")
-    .toLowerCase();
+    repo.description ?? '',
+    repo.fullName.replace(/[/\-_]/g, ' '),
+    repo.language ?? '',
+  ].join(' ').toLowerCase();
 
-  const matched: string[] = [];
+  const matched: number[] = [];
 
-  for (const cat of CATEGORY_DEFINITIONS) {
-    const hasMatch = cat.keywords.some((kw) => {
-      // Exact match against topics (most reliable signal)
+  for (const cat of allCategories) {
+    if (!cat.autoRules) continue;
+    let rules: AutoRules;
+    try { rules = JSON.parse(cat.autoRules); } catch { continue; }
+    if (!rules.keywords?.length) continue;
+
+    const hasMatch = rules.keywords.some(kw => {
       if (topicsLower.has(kw)) return true;
-
-      // Multi-word keywords can use includes on topics
-      if (kw.includes("-") && topics.some((t) => t.toLowerCase().includes(kw))) return true;
-
-      // Word-boundary match on description/name
-      // Use regex to avoid "ai" matching "trail", "app" matching "apple", etc.
-      const re = new RegExp(`\\b${kw.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`, "i");
+      if (kw.includes('-') && topics.some(t => t.toLowerCase().includes(kw))) return true;
+      const re = new RegExp(`\\b${kw.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i');
       return re.test(freeText);
     });
 
-    if (hasMatch) {
-      matched.push(cat.name);
-    }
+    if (hasMatch) matched.push(cat.id);
   }
 
-  return matched.length > 0 ? matched : ["Other"];
+  if (matched.length === 0) {
+    const other = allCategories.find(c => c.name === 'Other');
+    if (other) return [other.id];
+  }
+
+  return matched;
 }
 
 /**
- * Get category counts across all repos.
+ * Run auto-sort on all repos that have is_auto = true or no category.
+ * Does NOT touch manually assigned repos (is_auto = false).
  */
-export function getCategoryCounts(
-  repos: { topics: string | null; description: string | null; fullName: string; language: string | null }[]
-): CategoryCount[] {
-  const counts = new Map<string, number>();
+export function runAutoSort() {
+  const allCats = db.select().from(dbCategories).all();
+  const allRepos = db.select().from(starredRepos).where(eq(starredRepos.unstarred, false)).all();
 
-  for (const repo of repos) {
-    const cats = categorizeRepo(repo);
-    for (const cat of cats) {
-      counts.set(cat, (counts.get(cat) ?? 0) + 1);
+  let updated = 0;
+
+  for (const repo of allRepos) {
+    const existing = db.select().from(repoCategories).where(eq(repoCategories.repoId, repo.id)).get();
+    if (existing && !existing.isAuto) continue; // skip manual overrides
+
+    const matchedIds = categorizeRepo(repo, allCats);
+    const primaryId = matchedIds[0];
+    if (!primaryId) continue;
+
+    if (existing) {
+      if (existing.categoryId !== primaryId) {
+        db.update(repoCategories)
+          .set({ categoryId: primaryId, isAuto: true })
+          .where(eq(repoCategories.repoId, repo.id))
+          .run();
+        updated++;
+      }
+    } else {
+      db.insert(repoCategories).values({ repoId: repo.id, categoryId: primaryId, isAuto: true }).run();
+      updated++;
     }
   }
 
-  // Build result with icons, sorted by count
-  const result: CategoryCount[] = [];
-  for (const [name, count] of counts) {
-    const def = CATEGORY_DEFINITIONS.find((d) => d.name === name);
-    result.push({
-      name,
-      icon: def?.icon ?? "📁",
-      count,
-    });
-  }
-
-  result.sort((a, b) => b.count - a.count);
-  return result;
+  return { total: allRepos.length, updated };
 }
 
 /**
- * Filter repos by category name.
+ * Get category counts for sidebar/dashboard display.
+ * Reads from repo_categories join, not computed in-memory.
  */
-export function getReposByCategory<T extends { topics: string | null; description: string | null; fullName: string; language: string | null }>(
-  repos: T[],
-  categoryName: string
-): T[] {
-  return repos.filter((repo) => {
-    const cats = categorizeRepo(repo);
-    return cats.includes(categoryName);
-  });
+export function getCategoryCounts(): CategoryCount[] {
+  const allCats = db.select().from(dbCategories).all();
+
+  const counts = new Map<number, number>();
+  const rows = db.select({ categoryId: repoCategories.categoryId })
+    .from(repoCategories)
+    .innerJoin(starredRepos, and(eq(starredRepos.id, repoCategories.repoId), eq(starredRepos.unstarred, false)))
+    .all();
+
+  for (const row of rows) {
+    counts.set(row.categoryId, (counts.get(row.categoryId) ?? 0) + 1);
+  }
+
+  return allCats
+    .map(cat => ({
+      id: cat.id,
+      name: cat.name,
+      icon: cat.icon,
+      count: counts.get(cat.id) ?? 0,
+    }))
+    .filter(c => c.count > 0 || c.name === 'Other')
+    .sort((a, b) => b.count - a.count);
+}
+
+/**
+ * Get repos for a specific category by ID.
+ */
+export function getReposByCategoryId(categoryId: number) {
+  return db.select({ repo: starredRepos })
+    .from(starredRepos)
+    .innerJoin(repoCategories, eq(repoCategories.repoId, starredRepos.id))
+    .where(and(eq(repoCategories.categoryId, categoryId), eq(starredRepos.unstarred, false)))
+    .all()
+    .map(r => r.repo);
 }
