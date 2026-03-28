@@ -25,6 +25,7 @@ export default async function MissionControlPage({
     collectionId: params.collectionId ? Number(params.collectionId) : undefined,
     sort: params.sort || undefined,
     tagId: params.tagId ? Number(params.tagId) : undefined,
+    categoryId: params.categoryId ? Number(params.categoryId) : undefined,
   };
 
   const [repos, stageCounts, collections, collectionCounts, savedViews, tags, stages, allCategories, categoryCounts] = await Promise.all([
@@ -74,6 +75,8 @@ export default async function MissionControlPage({
           savedViews={savedViews}
           tags={tags}
           activeFilters={filters}
+          categories={allCategories}
+          categoryCounts={categoryCountMap}
         />
         <RepoTable
           repos={repos}

@@ -339,6 +339,7 @@ export interface MissionControlFilters {
   localStatus?: string;
   sort?: string;
   tagId?: number;
+  categoryId?: number;
 }
 
 export function getMissionControlRepos(filters: MissionControlFilters = {}) {
@@ -371,6 +372,12 @@ export function getMissionControlRepos(filters: MissionControlFilters = {}) {
       .from(repoTags)
       .where(eq(repoTags.tagId, filters.tagId));
     conditions.push(inArray(starredRepos.id, repoIds));
+  }
+  if (filters.categoryId) {
+    const catRepoIds = db.select({ repoId: repoCategories.repoId })
+      .from(repoCategories)
+      .where(eq(repoCategories.categoryId, filters.categoryId));
+    conditions.push(inArray(starredRepos.id, catRepoIds));
   }
 
   let query = db.select({

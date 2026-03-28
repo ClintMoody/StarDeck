@@ -30,9 +30,11 @@ interface MCSidebarProps {
   savedViews: SavedView[];
   tags: Tag[];
   activeFilters: MissionControlFilters;
+  categories: { id: number; name: string; icon: string; color: string }[];
+  categoryCounts: Record<number, number>;
 }
 
-export function MCSidebar({ collections, savedViews, tags, activeFilters }: MCSidebarProps) {
+export function MCSidebar({ collections, savedViews, tags, activeFilters, categories, categoryCounts }: MCSidebarProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [newCollectionName, setNewCollectionName] = useState('');
@@ -134,6 +136,25 @@ export function MCSidebar({ collections, savedViews, tags, activeFilters }: MCSi
           </button>
         )}
       </div>
+
+      {/* Categories */}
+      {categories.length > 0 && (
+        <div className="mb-4">
+          <div className="text-[#8b949e] font-semibold uppercase text-[10px] mb-2">Categories</div>
+          {categories.map(cat => (
+            <button
+              key={cat.id}
+              onClick={() => navigateWithFilter('categoryId', activeFilters.categoryId === cat.id ? null : String(cat.id))}
+              className={`block w-full text-left px-2 py-1 rounded transition-colors ${
+                activeFilters.categoryId === cat.id ? 'text-[#c9d1d9] bg-[#1f6feb22]' : 'text-[#8b949e] hover:text-[#c9d1d9]'
+              }`}
+            >
+              <span>{cat.icon}</span> {cat.name}
+              <span className="float-right opacity-50">{categoryCounts[cat.id] ?? 0}</span>
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* Watch Level */}
       <div className="mb-4">
