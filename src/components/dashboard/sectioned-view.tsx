@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import type { InferSelectModel } from "drizzle-orm";
 import type { starredRepos, repoLocalState } from "@/lib/db/schema";
 import { SlideOutPanel } from "@/components/slide-out-panel";
@@ -15,6 +16,7 @@ export interface RepoSection {
   repos: Repo[];
   type: "status" | "recent" | "category";
   emptyMessage?: string;
+  categoryId?: number;
 }
 
 interface SectionedViewProps {
@@ -34,8 +36,50 @@ export function SectionedView({
   clonedCount,
   runningCount,
 }: SectionedViewProps) {
+  const router = useRouter();
   const [selectedRepo, setSelectedRepo] = useState<Repo | null>(null);
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
+  const [editingSection, setEditingSection] = useState<string | null>(null);
+  const [editName, setEditName] = useState('');
+  const [dragOverSection, setDragOverSection] = useState<string | null>(null);
+
+  function handleDragStart(e: React.DragEvent, repoId: number) {
+    e.dataTransfer.setData('repoId', String(repoId));
+    e.dataTransfer.effectAllowed = 'move';
+  }
+
+  function handleDrop(e: React.DragEvent, targetCategoryId: number | undefined) {
+    e.preventDefault();
+    setDragOverSection(null);
+    if (!targetCategoryId) return;
+    const repoId = parseInt(e.dataTransfer.getData('repoId'));
+    if (!repoId) return;
+    fetch('/api/repo-category', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ repoId, categoryId: targetCategoryId }),
+    }).then(() => router.refresh());
+  }
+
+  function handleDragOver(e: React.DragEvent, sectionId: string) {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    setDragOverSection(sectionId);
+  }
+
+  function handleDragLeave() {
+    setDragOverSection(null);
+  }
+
+  async function saveHeaderName(categoryId: number) {
+    await fetch('/api/categories', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: categoryId, name: editName }),
+    });
+    setEditingSection(null);
+    router.refresh();
+  }
 
   function toggleExpand(sectionId: string) {
     setExpandedSections((prev) => {
@@ -84,18 +128,44 @@ export function SectionedView({
           const hiddenCount = section.repos.length - previewCount;
 
           return (
-            <div key={section.id}>
+            <div
+              key={section.id}
+              onDrop={section.type === 'category' ? (e) => handleDrop(e, section.categoryId) : undefined}
+              onDragOver={section.type === 'category' ? (e) => handleDragOver(e, section.id) : undefined}
+              onDragLeave={section.type === 'category' ? handleDragLeave : undefined}
+              className={dragOverSection === section.id ? 'ring-2 ring-blue-500/50 rounded-lg' : ''}
+            >
               {/* Section Header */}
               <div className="flex items-center justify-between mb-2.5">
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 group">
                   <span>{section.icon}</span>
-                  <h2 className={`text-xs font-bold uppercase tracking-widest ${
-                    section.type === "status" ? "text-green-400" :
-                    section.type === "recent" ? "text-amber-400" :
-                    "text-gray-500"
-                  }`}>
-                    {section.title}
-                  </h2>
+                  {section.type === 'category' && section.categoryId && editingSection === section.id ? (
+                    <input
+                      autoFocus
+                      value={editName}
+                      onChange={(e) => setEditName(e.target.value)}
+                      onBlur={() => saveHeaderName(section.categoryId!)}
+                      onKeyDown={(e) => e.key === 'Enter' && saveHeaderName(section.categoryId!)}
+                      className="text-xs font-bold uppercase tracking-widest bg-transparent border-b border-blue-500 text-gray-300 outline-none w-32"
+                    />
+                  ) : (
+                    <h2 className={`text-xs font-bold uppercase tracking-widest ${
+                      section.type === "status" ? "text-green-400" :
+                      section.type === "recent" ? "text-amber-400" :
+                      "text-gray-500"
+                    }`}>
+                      {section.title}
+                    </h2>
+                  )}
+                  {section.type === 'category' && section.categoryId && editingSection !== section.id && (
+                    <button
+                      onClick={() => { setEditingSection(section.id); setEditName(section.title); }}
+                      className="opacity-0 group-hover:opacity-100 text-gray-600 hover:text-gray-400 ml-1 transition-opacity"
+                      title="Rename category"
+                    >
+                      ✏️
+                    </button>
+                  )}
                   <span className="text-xs text-gray-700 bg-gray-800/40 px-1.5 py-0.5 rounded">
                     {section.repos.length}
                   </span>
@@ -127,6 +197,8 @@ export function SectionedView({
                       repo={repo}
                       status={localStateMap[repo.id]?.processStatus ?? undefined}
                       onClick={() => setSelectedRepo(repo)}
+                      draggable={section.type === 'category'}
+                      onDragStart={section.type === 'category' ? (e) => handleDragStart(e, repo.id) : undefined}
                     />
                   ))}
                   {!isExpanded && hiddenCount > 0 && (
@@ -146,6 +218,8 @@ export function SectionedView({
                       repo={repo}
                       status={localStateMap[repo.id]?.processStatus ?? undefined}
                       onClick={() => setSelectedRepo(repo)}
+                      draggable={section.type === 'category'}
+                      onDragStart={section.type === 'category' ? (e) => handleDragStart(e, repo.id) : undefined}
                     />
                   ))}
                   {!isExpanded && hiddenCount > 0 && (
@@ -174,7 +248,7 @@ export function SectionedView({
 }
 
 /** Compact card — name, stars, owner, one-line description */
-function CompactCard({ repo, status, onClick }: { repo: Repo; status?: string; onClick: () => void }) {
+function CompactCard({ repo, status, onClick, draggable, onDragStart }: { repo: Repo; status?: string; onClick: () => void; draggable?: boolean; onDragStart?: (e: React.DragEvent) => void }) {
   const LANG_COLORS: Record<string, string> = {
     TypeScript: "bg-blue-500", JavaScript: "bg-yellow-400", Python: "bg-green-500",
     Rust: "bg-orange-500", Go: "bg-cyan-400", "C++": "bg-pink-500",
@@ -185,6 +259,8 @@ function CompactCard({ repo, status, onClick }: { repo: Repo; status?: string; o
   return (
     <div
       onClick={onClick}
+      draggable={draggable}
+      onDragStart={onDragStart}
       className="bg-gray-900/50 border border-gray-800/50 rounded-lg px-3 py-2.5 hover:border-blue-700/40 hover:bg-gray-900/80 transition-all cursor-pointer group"
     >
       <div className="flex items-center gap-2 mb-1">
@@ -208,7 +284,7 @@ function CompactCard({ repo, status, onClick }: { repo: Repo; status?: string; o
 }
 
 /** Full card for status/recent — description + topics */
-function FullCard({ repo, status, onClick }: { repo: Repo; status?: string; onClick: () => void }) {
+function FullCard({ repo, status, onClick, draggable, onDragStart }: { repo: Repo; status?: string; onClick: () => void; draggable?: boolean; onDragStart?: (e: React.DragEvent) => void }) {
   const topics: string[] = repo.topics ? JSON.parse(repo.topics) : [];
   const LANG_COLORS: Record<string, string> = {
     TypeScript: "bg-blue-500", JavaScript: "bg-yellow-400", Python: "bg-green-500",
@@ -220,6 +296,8 @@ function FullCard({ repo, status, onClick }: { repo: Repo; status?: string; onCl
   return (
     <div
       onClick={onClick}
+      draggable={draggable}
+      onDragStart={onDragStart}
       className="bg-gray-900/80 border border-gray-800 rounded-lg p-3.5 hover:border-blue-700/50 hover:bg-gray-900 transition-all cursor-pointer group"
     >
       <div className="flex items-start justify-between mb-1">

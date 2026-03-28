@@ -16,9 +16,10 @@ import {
   getLastSyncTime,
   getArchivedCount,
 } from "@/lib/queries";
-import { getCategoryCounts, getReposByCategory, categorizeRepo } from "@/lib/categories";
+import { getCategoryCounts, getReposByCategoryId } from "@/lib/categories";
+import { getAllDbCategories } from "@/lib/queries";
 import { parseFiltersFromParams } from "@/lib/filters";
-import { starredRepos, repoLocalState } from "@/lib/db/schema";
+import { starredRepos, repoLocalState, repoCategories, dbCategories } from "@/lib/db/schema";
 import { db } from "@/lib/db";
 import { eq, desc } from "drizzle-orm";
 import { KeyboardHandler } from "@/components/keyboard-handler";
@@ -43,7 +44,8 @@ export default async function HomePage({ searchParams }: PageProps) {
   // Fetch all data
   const allRepos = getFilteredRepos({ sort: filters.sort });
   const allTags = getAllTags();
-  const categories = getCategoryCounts(allRepos);
+  const categories = getCategoryCounts();
+  const allDbCategories = getAllDbCategories();
   const stats = getRepoStats();
   const archivedCount = getArchivedCount();
   const lastSyncTime = getLastSyncTime();
@@ -75,7 +77,10 @@ export default async function HomePage({ searchParams }: PageProps) {
       : filters.tagId
       ? getReposByTag(filters.tagId)
       : filters.category
-      ? getReposByCategory(getFilteredRepos(filters), filters.category)
+      ? (() => {
+          const cat = allDbCategories.find(c => c.name === filters.category);
+          return cat ? getReposByCategoryId(cat.id) : getFilteredRepos(filters);
+        })()
       : getFilteredRepos(filters);
 
     mainContent = <MainArea repos={repos} localStateMap={localStateObj} />;
@@ -124,8 +129,8 @@ export default async function HomePage({ searchParams }: PageProps) {
 
 /**
  * Build the sectioned view from all repos + local state.
- * Each repo appears in ONE category only (its primary/first match).
- * Status sections (Active, Cloned) and Recently Starred can overlap with categories.
+ * Category sections are driven by DB categories + repo_categories join.
+ * Status sections (Active) and Recently Starred can overlap with categories.
  */
 function buildSections(
   allRepos: ReturnType<typeof getFilteredRepos>,
@@ -165,47 +170,47 @@ function buildSections(
     type: "recent",
   });
 
-  // 3. CATEGORY SECTIONS — each repo goes to its FIRST matched category only
-  const categoryIcons: Record<string, string> = {
-    "AI & Agents": "🤖",
-    "Security & OSINT": "🔒",
-    "Developer Tools": "🛠️",
-    "Audio & Music": "🎵",
-    "Knowledge & Memory": "📚",
-    "Geolocation & Maps": "🗺️",
-    "Mobile & Desktop": "📱",
-    "Backend & Infra": "⚙️",
-    "Automation & Browser": "🌐",
-    "Other": "📁",
-  };
+  // 3. CATEGORY SECTIONS — from DB categories + repo_categories join
+  const allCats = getAllDbCategories();
+  const assignments = db.select().from(repoCategories).all();
+  const repoCatMap = new Map(assignments.map(a => [a.repoId, a.categoryId]));
 
-  const categoryMap = new Map<string, typeof allRepos>();
-  const assigned = new Set<number>();
-
-  // First pass: assign each repo to its primary (first) category
+  // Group repos by their assigned category
+  const categoryRepoMap = new Map<number, typeof allRepos>();
   for (const repo of allRepos) {
-    const cats = categorizeRepo(repo);
-    const primaryCat = cats[0] ?? "Other";
-    if (!categoryMap.has(primaryCat)) categoryMap.set(primaryCat, []);
-    categoryMap.get(primaryCat)!.push(repo);
-    assigned.add(repo.id);
+    const catId = repoCatMap.get(repo.id);
+    if (catId !== undefined) {
+      if (!categoryRepoMap.has(catId)) categoryRepoMap.set(catId, []);
+      categoryRepoMap.get(catId)!.push(repo);
+    }
   }
 
-  // Sort categories by count (largest first), but put "Other" last
-  const sortedCategories = [...categoryMap.entries()]
+  // Uncategorized repos go to "Other"
+  const categorizedIds = new Set(assignments.map(a => a.repoId));
+  const uncategorized = allRepos.filter(r => !categorizedIds.has(r.id));
+  const otherCat = allCats.find(c => c.name === 'Other');
+  if (otherCat && uncategorized.length > 0) {
+    const existing = categoryRepoMap.get(otherCat.id) ?? [];
+    categoryRepoMap.set(otherCat.id, [...existing, ...uncategorized]);
+  }
+
+  // Sort categories by repo count (largest first), "Other" last
+  const sortedCats = allCats
+    .filter(cat => (categoryRepoMap.get(cat.id)?.length ?? 0) > 0)
     .sort((a, b) => {
-      if (a[0] === "Other") return 1;
-      if (b[0] === "Other") return -1;
-      return b[1].length - a[1].length;
+      if (a.name === 'Other') return 1;
+      if (b.name === 'Other') return -1;
+      return (categoryRepoMap.get(b.id)?.length ?? 0) - (categoryRepoMap.get(a.id)?.length ?? 0);
     });
 
-  for (const [catName, catRepos] of sortedCategories) {
+  for (const cat of sortedCats) {
     sections.push({
-      id: `cat-${catName}`,
-      title: catName,
-      icon: categoryIcons[catName] ?? "📁",
-      repos: catRepos,
+      id: `cat-${cat.id}`,
+      title: cat.name,
+      icon: cat.icon,
+      repos: categoryRepoMap.get(cat.id) ?? [],
       type: "category",
+      categoryId: cat.id,
     });
   }
 
