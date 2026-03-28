@@ -4,6 +4,7 @@ import { useState, useCallback, useRef, useTransition } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { RepoTableRow } from './repo-table-row';
 import { BulkActionBar } from './bulk-action-bar';
+import { SlideOutPanel } from '@/components/slide-out-panel';
 import { MissionControlFilters } from '@/lib/queries';
 
 interface RepoData {
@@ -250,6 +251,12 @@ export function RepoTable({ repos, filters, totalCount, activeStage, stages, cat
           ))
         )}
       </div>
+
+      {detailRepo && (() => {
+        const match = repos.find(r => r.repo.owner === detailRepo.owner && r.repo.name === detailRepo.name);
+        if (!match) return null;
+        return <SlideOutPanel repo={match.repo} onClose={() => setDetailRepo(null)} />;
+      })()}
     </div>
   );
 }

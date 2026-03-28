@@ -208,7 +208,7 @@ export function RepoTableRow({ data, selected, onSelect, onOpenDetail, gridTempl
   return (
     <div
       className={`
-        grid items-center border-b border-[#21262d44] text-xs
+        grid items-center border-b border-[#30363d] text-xs
         hover:bg-[#161b2266] transition-colors
         ${selected ? 'bg-[#1f6feb11]' : ''}
       `}
