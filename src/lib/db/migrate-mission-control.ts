@@ -13,6 +13,9 @@ export function migrateMissionControl(db: Database.Database) {
     if (!starredCols.includes('watch_level')) {
       db.exec("ALTER TABLE starred_repos ADD COLUMN watch_level TEXT NOT NULL DEFAULT 'releases_only'");
     }
+    if (!starredCols.includes('latest_remote_sha')) {
+      db.exec("ALTER TABLE starred_repos ADD COLUMN latest_remote_sha TEXT");
+    }
 
     // Add localTag to repo_local_state
     const localCols = db.prepare(

@@ -1,0 +1,1 @@
+ALTER TABLE `starred_repos` ADD `latest_remote_sha` text;

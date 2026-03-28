@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { StageDropdown } from './stage-dropdown';
 import { WatchLevelDropdown } from './watch-level-dropdown';
 import { OverflowMenu } from './overflow-menu';
+import { compareVersions, formatVersionDisplay } from '@/lib/version-check';
 
 interface RepoRowData {
   repo: {
@@ -15,6 +16,7 @@ interface RepoRowData {
     starCount: number;
     lastCommitAt: string | null;
     lastReleaseVersion: string | null;
+    latestRemoteSha: string | null;
     workflowStage: string;
     watchLevel: string;
   };
@@ -41,9 +43,17 @@ export function RepoTableRow({ data, selected, onSelect, onOpenDetail, gridTempl
   const router = useRouter();
 
   const isCloned = !!localState?.clonePath;
-  const isOutdated = isCloned && localState?.localVersion && repo.lastReleaseVersion &&
-    localState.localTag !== repo.lastReleaseVersion;
   const isRunning = localState?.processStatus === 'running';
+
+  // Use real version comparison
+  const versionResult = compareVersions({
+    localTag: localState?.localTag || null,
+    localSha: localState?.localVersion || null,
+    latestRelease: repo.lastReleaseVersion || null,
+    latestRemoteSha: repo.latestRemoteSha || null,
+  });
+  const isOutdated = versionResult.status === 'outdated' || versionResult.status === 'vulnerable';
+  const versionDisplay = formatVersionDisplay(versionResult);
 
   // Local status
   let localStatusText = '— Not cloned';
@@ -54,23 +64,12 @@ export function RepoTableRow({ data, selected, onSelect, onOpenDetail, gridTempl
   } else if (isCloned && isOutdated) {
     localStatusText = '⚠ Outdated';
     localStatusColor = '#f85149';
-  } else if (isCloned) {
+  } else if (isCloned && versionResult.status === 'up_to_date') {
     localStatusText = '✓ Up to date';
     localStatusColor = '#3fb950';
-  }
-
-  // Version display
-  let versionDisplay = '—';
-  if (isCloned && localState?.localTag && repo.lastReleaseVersion) {
-    if (localState.localTag === repo.lastReleaseVersion) {
-      versionDisplay = `${localState.localTag} ✓`;
-    } else {
-      versionDisplay = `${localState.localTag} → ${repo.lastReleaseVersion}`;
-    }
-  } else if (isCloned && localState?.localVersion) {
-    versionDisplay = localState.localVersion.substring(0, 7);
-  } else if (repo.lastReleaseVersion) {
-    versionDisplay = `Latest: ${repo.lastReleaseVersion}`;
+  } else if (isCloned) {
+    localStatusText = '● Cloned';
+    localStatusColor = '#8b949e';
   }
 
   // Disk usage

@@ -31,6 +31,7 @@ export const starredRepos = sqliteTable(
     updatedAt: text("updated_at").default(sql`(datetime('now'))`),
     workflowStage: text('workflow_stage').notNull().default('watching'),
     watchLevel: text('watch_level').notNull().default('releases_only'),
+    latestRemoteSha: text('latest_remote_sha'),
   },
   (table) => [uniqueIndex("starred_repos_github_id_idx").on(table.githubId)]
 );

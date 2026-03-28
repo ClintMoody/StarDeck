@@ -95,6 +95,23 @@ export class GitHubClient {
     return response.json();
   }
 
+  async getLatestCommitSha(
+    owner: string,
+    repo: string
+  ): Promise<string | null> {
+    const url = `${this.baseUrl}/repos/${owner}/${repo}/commits?per_page=1`;
+    const response = await fetch(url, { headers: this.headers() });
+
+    this.updateRateLimit(response.headers);
+
+    if (!response.ok) {
+      return null;
+    }
+
+    const commits: { sha: string }[] = await response.json();
+    return commits.length > 0 ? commits[0].sha : null;
+  }
+
   async getReadmeHtml(
     owner: string,
     repo: string

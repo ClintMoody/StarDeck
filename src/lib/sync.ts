@@ -1,6 +1,6 @@
 import { GitHubClient } from "@/lib/github";
-import { starredRepos, syncLog } from "@/lib/db/schema";
-import { eq, notInArray } from "drizzle-orm";
+import { starredRepos, repoLocalState, syncLog } from "@/lib/db/schema";
+import { eq, notInArray, isNotNull } from "drizzle-orm";
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 import type * as schema from "@/lib/db/schema";
 
@@ -72,6 +72,40 @@ export async function syncStarredRepos(
         .where(notInArray(starredRepos.githubId, githubIds))
         .run();
       result.unstarred = unmarked.changes;
+    }
+
+    // Fetch latest remote SHA for repos that have a local clone
+    const clonedRepos = db
+      .select({ repoId: repoLocalState.repoId })
+      .from(repoLocalState)
+      .where(isNotNull(repoLocalState.clonePath))
+      .all();
+
+    const clonedRepoIds = new Set(clonedRepos.map(r => r.repoId));
+
+    for (const item of starred) {
+      const { repo } = item;
+      if (!clonedRepoIds.size) break;
+
+      const dbRepo = db
+        .select({ id: starredRepos.id })
+        .from(starredRepos)
+        .where(eq(starredRepos.githubId, repo.id))
+        .get();
+
+      if (dbRepo && clonedRepoIds.has(dbRepo.id)) {
+        try {
+          const sha = await client.getLatestCommitSha(repo.owner.login, repo.name);
+          if (sha) {
+            db.update(starredRepos)
+              .set({ latestRemoteSha: sha })
+              .where(eq(starredRepos.id, dbRepo.id))
+              .run();
+          }
+        } catch {
+          // Skip on error — don't break sync for a single repo
+        }
+      }
     }
 
     // Log the sync

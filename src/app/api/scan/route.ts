@@ -38,19 +38,26 @@ export async function POST() {
 
   const matches = matchScanResults(allScanResults, starred, existingPaths);
 
+  // Build a lookup from localPath -> headSha for storing version info
+  const shaByPath = new Map<string, string | null>();
+  for (const scan of allScanResults) {
+    shaByPath.set(scan.localPath, scan.headSha);
+  }
+
   for (const match of matches.autoMatched) {
+    const headSha = shaByPath.get(match.localPath) ?? null;
     const existing = db.select().from(repoLocalState)
       .where(eq(repoLocalState.repoId, match.repoId))
       .get();
 
     if (existing) {
       db.update(repoLocalState)
-        .set({ clonePath: match.localPath })
+        .set({ clonePath: match.localPath, localVersion: headSha })
         .where(eq(repoLocalState.repoId, match.repoId))
         .run();
     } else {
       db.insert(repoLocalState)
-        .values({ repoId: match.repoId, clonePath: match.localPath, processStatus: 'stopped' })
+        .values({ repoId: match.repoId, clonePath: match.localPath, localVersion: headSha, processStatus: 'stopped' })
         .run();
     }
 

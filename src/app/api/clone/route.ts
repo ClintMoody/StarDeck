@@ -4,6 +4,7 @@ import { processManager } from "@/lib/process-manager";
 import { getRepoByFullName, upsertRepoLocalState } from "@/lib/queries";
 import { detectProjectType } from "@/lib/recipe-detector";
 import { upsertRepoRecipe } from "@/lib/queries";
+import { getLocalVersionInfo } from "@/lib/version-check";
 import { db } from "@/lib/db";
 import { starredRepos } from "@/lib/db/schema";
 import { eq, and, inArray } from "drizzle-orm";
@@ -55,7 +56,13 @@ export async function POST(request: NextRequest) {
           runCommand: detected.runCommand,
           approved: false,
         });
-        upsertRepoLocalState(repo.id, { processStatus: "stopped" });
+        // Store local HEAD SHA and tag after clone
+        const versionInfo = getLocalVersionInfo(targetDir);
+        upsertRepoLocalState(repo.id, {
+          processStatus: "stopped",
+          localVersion: versionInfo.sha,
+          localTag: versionInfo.tag,
+        });
 
         // Auto-advance workflow stage to "downloaded"
         db.update(starredRepos)
