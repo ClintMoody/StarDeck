@@ -190,6 +190,12 @@ export function RepoTable({ repos, filters, totalCount, activeStage, stages, cat
       {selectedIds.size > 0 && (
         <BulkActionBar
           selectedIds={Array.from(selectedIds)}
+          repos={repos.map(r => ({
+            id: r.repo.id,
+            owner: r.repo.owner,
+            name: r.repo.name,
+            clonePath: r.localState?.clonePath ?? null,
+          }))}
           onClear={() => setSelectedIds(new Set())}
         />
       )}
