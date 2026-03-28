@@ -42,7 +42,7 @@ interface RepoTableRowProps {
   gridTemplate: string;
   stages: { id: number; name: string; icon: string; color: string }[];
   categories: { id: number; name: string; icon: string; color: string }[];
-  repoCategoryMap: Record<number, { categoryId: number; isAuto: boolean }>;
+  repoCategoryMap: Record<number, { categoryIds: number[]; hasManualOverride: boolean }>;
 }
 
 
@@ -241,8 +241,8 @@ export function RepoTableRow({ data, selected, onSelect, onOpenDetail, gridTempl
       <div className="py-2">
         <CategoryDropdown
           repoId={repo.id}
-          currentCategoryId={repoCategoryMap[repo.id]?.categoryId ?? null}
-          isAuto={repoCategoryMap[repo.id]?.isAuto ?? true}
+          assignedCategoryIds={repoCategoryMap[repo.id]?.categoryIds ?? []}
+          hasManualOverride={repoCategoryMap[repo.id]?.hasManualOverride ?? false}
           categories={categories}
         />
       </div>

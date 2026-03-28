@@ -173,16 +173,14 @@ function buildSections(
   // 3. CATEGORY SECTIONS — from DB categories + repo_categories join
   const allCats = getAllDbCategories();
   const assignments = db.select().from(repoCategories).all();
-  const repoCatMap = new Map(assignments.map(a => [a.repoId, a.categoryId]));
 
-  // Group repos by their assigned category
+  // Group repos by their assigned categories (a repo can appear in multiple)
   const categoryRepoMap = new Map<number, typeof allRepos>();
-  for (const repo of allRepos) {
-    const catId = repoCatMap.get(repo.id);
-    if (catId !== undefined) {
-      if (!categoryRepoMap.has(catId)) categoryRepoMap.set(catId, []);
-      categoryRepoMap.get(catId)!.push(repo);
-    }
+  for (const a of assignments) {
+    const repo = allRepos.find(r => r.id === a.repoId);
+    if (!repo) continue;
+    if (!categoryRepoMap.has(a.categoryId)) categoryRepoMap.set(a.categoryId, []);
+    categoryRepoMap.get(a.categoryId)!.push(repo);
   }
 
   // Uncategorized repos go to "Other"

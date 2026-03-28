@@ -67,24 +67,33 @@ export function runAutoSort() {
   let updated = 0;
 
   for (const repo of allRepos) {
-    const existing = db.select().from(repoCategories).where(eq(repoCategories.repoId, repo.id)).get();
-    if (existing && !existing.isAuto) continue; // skip manual overrides
+    // Get all current assignments for this repo
+    const existing = db.select().from(repoCategories).where(eq(repoCategories.repoId, repo.id)).all();
+    const manualIds = new Set(existing.filter(e => !e.isAuto).map(e => e.categoryId));
+    const autoIds = new Set(existing.filter(e => e.isAuto).map(e => e.categoryId));
+
+    // If repo has ANY manual assignments, skip it entirely
+    if (manualIds.size > 0) continue;
 
     const matchedIds = categorizeRepo(repo, allCats);
-    const primaryId = matchedIds[0];
-    if (!primaryId) continue;
+    if (matchedIds.length === 0) continue;
 
-    if (existing) {
-      if (existing.categoryId !== primaryId) {
-        db.update(repoCategories)
-          .set({ categoryId: primaryId, isAuto: true })
-          .where(eq(repoCategories.repoId, repo.id))
+    // Remove auto-assignments that no longer match
+    for (const oldId of autoIds) {
+      if (!matchedIds.includes(oldId)) {
+        db.delete(repoCategories)
+          .where(and(eq(repoCategories.repoId, repo.id), eq(repoCategories.categoryId, oldId)))
           .run();
         updated++;
       }
-    } else {
-      db.insert(repoCategories).values({ repoId: repo.id, categoryId: primaryId, isAuto: true }).run();
-      updated++;
+    }
+
+    // Add new matches
+    for (const catId of matchedIds) {
+      if (!autoIds.has(catId)) {
+        db.insert(repoCategories).values({ repoId: repo.id, categoryId: catId, isAuto: true }).run();
+        updated++;
+      }
     }
   }
 

@@ -18,7 +18,7 @@ interface RepoTableProps {
   activeStage: string | null;
   stages: { id: number; name: string; icon: string; color: string }[];
   categories: { id: number; name: string; icon: string; color: string }[];
-  repoCategoryMap: Record<number, { categoryId: number; isAuto: boolean }>;
+  repoCategoryMap: Record<number, { categoryIds: number[]; hasManualOverride: boolean }>;
 }
 
 const SORT_OPTIONS = [

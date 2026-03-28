@@ -306,5 +306,5 @@ export const repoCategories = sqliteTable('repo_categories', {
   categoryId: integer('category_id').notNull().references(() => dbCategories.id, { onDelete: 'cascade' }),
   isAuto: integer('is_auto', { mode: 'boolean' }).notNull().default(true),
 }, (table) => [
-  uniqueIndex('repo_categories_repo_idx').on(table.repoId),
+  uniqueIndex('repo_categories_repo_cat_idx').on(table.repoId, table.categoryId),
 ]);

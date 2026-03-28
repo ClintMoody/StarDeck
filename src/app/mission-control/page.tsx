@@ -48,7 +48,12 @@ export default async function MissionControlPage({
   const categoryCountMap = Object.fromEntries(categoryCounts.map(c => [c.categoryId, c.count]));
 
   const repoCatAssignments = db.select().from(repoCategories).all();
-  const repoCatMap = Object.fromEntries(repoCatAssignments.map(a => [a.repoId, { categoryId: a.categoryId, isAuto: a.isAuto }]));
+  const repoCatMap: Record<number, { categoryIds: number[]; hasManualOverride: boolean }> = {};
+  for (const a of repoCatAssignments) {
+    if (!repoCatMap[a.repoId]) repoCatMap[a.repoId] = { categoryIds: [], hasManualOverride: false };
+    repoCatMap[a.repoId].categoryIds.push(a.categoryId);
+    if (!a.isAuto) repoCatMap[a.repoId].hasManualOverride = true;
+  }
 
   const collectionsWithCounts = collections.map(c => ({
     ...c,

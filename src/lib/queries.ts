@@ -591,21 +591,33 @@ export function deleteDbCategory(id: number) {
 
 // ---- Repo Category Assignment ----
 
-export function getRepoCategory(repoId: number) {
+export function getRepoCategories(repoId: number) {
   return db.select({ categoryId: repoCategories.categoryId, isAuto: repoCategories.isAuto })
     .from(repoCategories)
     .where(eq(repoCategories.repoId, repoId))
-    .get();
+    .all();
 }
 
-export function setRepoCategory(repoId: number, categoryId: number, isAuto: boolean) {
-  const existing = getRepoCategory(repoId);
+/** Toggle a category on a repo. If already assigned, remove it. If not, add it. */
+export function toggleRepoCategory(repoId: number, categoryId: number) {
+  const existing = db.select().from(repoCategories)
+    .where(and(eq(repoCategories.repoId, repoId), eq(repoCategories.categoryId, categoryId)))
+    .get();
   if (existing) {
-    db.update(repoCategories)
-      .set({ categoryId, isAuto })
-      .where(eq(repoCategories.repoId, repoId))
+    db.delete(repoCategories)
+      .where(and(eq(repoCategories.repoId, repoId), eq(repoCategories.categoryId, categoryId)))
       .run();
   } else {
+    db.insert(repoCategories).values({ repoId, categoryId, isAuto: false }).run();
+  }
+}
+
+/** Set a category on a repo (used by auto-sort — adds without removing others) */
+export function addRepoCategory(repoId: number, categoryId: number, isAuto: boolean) {
+  const existing = db.select().from(repoCategories)
+    .where(and(eq(repoCategories.repoId, repoId), eq(repoCategories.categoryId, categoryId)))
+    .get();
+  if (!existing) {
     db.insert(repoCategories).values({ repoId, categoryId, isAuto }).run();
   }
 }
