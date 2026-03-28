@@ -15,3 +15,15 @@ export function runMigrations() {
 
 // Run on import during server startup
 runMigrations();
+
+import { seedStagesAndCategories, migrateWorkflowStageIds } from './seed-stages-categories';
+
+try {
+  seedStagesAndCategories();
+  migrateWorkflowStageIds();
+} catch (e: any) {
+  const msg = e?.message || '';
+  if (!msg.includes('already exists') && !msg.includes('duplicate') && !msg.includes('no such table')) {
+    console.error('Seed/migrate error:', msg);
+  }
+}

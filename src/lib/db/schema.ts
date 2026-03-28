@@ -1,6 +1,17 @@
 import { sqliteTable, text, integer, real, uniqueIndex, primaryKey } from "drizzle-orm/sqlite-core";
 import { sql } from "drizzle-orm";
 
+// ─── Workflow Stages ───────────────────────────────────
+
+export const workflowStages = sqliteTable('workflow_stages', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  name: text('name').notNull(),
+  icon: text('icon').notNull(),
+  color: text('color').notNull(),
+  position: integer('position').notNull(),
+  deletable: integer('deletable', { mode: 'boolean' }).notNull().default(true),
+});
+
 // ─── Starred Repos ───────────────────────────────────────
 
 export const starredRepos = sqliteTable(
@@ -32,6 +43,7 @@ export const starredRepos = sqliteTable(
     workflowStage: text('workflow_stage').notNull().default('watching'),
     watchLevel: text('watch_level').notNull().default('releases_only'),
     latestRemoteSha: text('latest_remote_sha'),
+    workflowStageId: integer('workflow_stage_id').references(() => workflowStages.id),
   },
   (table) => [uniqueIndex("starred_repos_github_id_idx").on(table.githubId)]
 );
@@ -275,3 +287,24 @@ export const savedViews = sqliteTable('saved_views', {
   builtIn: integer('built_in', { mode: 'boolean' }).notNull().default(false),
   createdAt: text('created_at').notNull().default(sql`(datetime('now'))`),
 });
+
+// ─── Categories (DB-driven) ────────────────────────────
+
+export const dbCategories = sqliteTable('db_categories', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  name: text('name').notNull(),
+  icon: text('icon').notNull(),
+  color: text('color').notNull(),
+  position: integer('position').notNull(),
+  autoRules: text('auto_rules'),
+});
+
+// ─── Repo Categories ───────────────────────────────────
+
+export const repoCategories = sqliteTable('repo_categories', {
+  repoId: integer('repo_id').notNull().references(() => starredRepos.id, { onDelete: 'cascade' }),
+  categoryId: integer('category_id').notNull().references(() => dbCategories.id, { onDelete: 'cascade' }),
+  isAuto: integer('is_auto', { mode: 'boolean' }).notNull().default(true),
+}, (table) => [
+  uniqueIndex('repo_categories_repo_idx').on(table.repoId),
+]);

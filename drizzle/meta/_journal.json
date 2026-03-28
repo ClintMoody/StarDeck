@@ -29,6 +29,13 @@
       "when": 1774661473858,
       "tag": "0003_premium_mongu",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1774718849370,
+      "tag": "0004_huge_vargas",
+      "breakpoints": true
     }
   ]
 }
