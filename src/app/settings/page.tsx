@@ -1,10 +1,12 @@
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { getAllSettings } from "@/lib/queries";
+import { getAllSettings, getAllWorkflowStages, getAllDbCategories } from "@/lib/queries";
 import { NotificationSettings } from "@/components/settings/notification-settings";
 import { GeneralSettings } from "@/components/settings/general-settings";
 import { DataSettings } from "@/components/settings/data-settings";
+import { StagesSettings } from "@/components/settings/stages-settings";
+import { CategoriesSettings } from "@/components/settings/categories-settings";
 import "@/lib/db/migrate";
 
 export default async function SettingsPage() {
@@ -12,6 +14,8 @@ export default async function SettingsPage() {
   if (!session) redirect("/login");
 
   const settings = getAllSettings();
+  const stages = getAllWorkflowStages();
+  const allCategories = getAllDbCategories();
 
   return (
     <div className="max-w-3xl mx-auto p-8">
@@ -28,6 +32,10 @@ export default async function SettingsPage() {
         <NotificationSettings initialSettings={settings} />
         <hr className="border-gray-800" />
         <DataSettings />
+        <hr className="border-gray-800" />
+        <StagesSettings initialStages={stages} />
+        <hr className="border-gray-800" />
+        <CategoriesSettings initialCategories={allCategories} />
       </div>
     </div>
   );
