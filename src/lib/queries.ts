@@ -1,5 +1,5 @@
 import { db } from "@/lib/db";
-import { starredRepos, tags, repoTags, syncLog, releases, securityAdvisories, repoNotes, repoLocalState, recipes, notifications, settings as settingsTable, collections, collectionRepos, scanDirectories, repoActivity, savedViews } from "@/lib/db/schema";
+import { starredRepos, tags, repoTags, syncLog, releases, securityAdvisories, repoNotes, repoLocalState, recipes, notifications, settings as settingsTable, collections, collectionRepos, scanDirectories, repoActivity, savedViews, workflowStages, dbCategories, repoCategories } from "@/lib/db/schema";
 import { eq, desc, asc, like, or, and, count, sql, inArray } from "drizzle-orm";
 import type { SQL } from "drizzle-orm";
 import "@/lib/db/migrate";
@@ -533,4 +533,92 @@ export function getRepoActivityFeed(repoId: number, limit = 50) {
 
 export function insertRepoActivity(repoId: number, type: string, summary: string, data?: string, externalUrl?: string) {
   return db.insert(repoActivity).values({ repoId, type, summary, data, externalUrl }).run();
+}
+
+// ---- Workflow Stage Queries ----
+
+export function getAllWorkflowStages() {
+  return db.select().from(workflowStages).orderBy(asc(workflowStages.position)).all();
+}
+
+export function createWorkflowStage(data: { name: string; icon: string; color: string }) {
+  const maxPos = db.select({ max: sql<number>`max(${workflowStages.position})` }).from(workflowStages).get();
+  const position = (maxPos?.max ?? -1) + 1;
+  return db.insert(workflowStages).values({ ...data, position, deletable: true }).returning().get();
+}
+
+export function updateWorkflowStageDef(stageId: number, data: Partial<{ name: string; icon: string; color: string; position: number }>) {
+  return db.update(workflowStages).set(data).where(eq(workflowStages.id, stageId)).run();
+}
+
+export function deleteWorkflowStage(stageId: number, reassignToId: number) {
+  db.update(starredRepos).set({ workflowStageId: reassignToId }).where(eq(starredRepos.workflowStageId, stageId)).run();
+  return db.delete(workflowStages).where(eq(workflowStages.id, stageId)).run();
+}
+
+// ---- DB Category Queries ----
+
+export function getAllDbCategories() {
+  return db.select().from(dbCategories).orderBy(asc(dbCategories.position)).all();
+}
+
+export function createDbCategory(data: { name: string; icon: string; color: string; autoRules?: string | null }) {
+  const maxPos = db.select({ max: sql<number>`max(${dbCategories.position})` }).from(dbCategories).get();
+  const position = (maxPos?.max ?? -1) + 1;
+  return db.insert(dbCategories).values({ ...data, position }).returning().get();
+}
+
+export function updateDbCategory(id: number, data: Partial<{ name: string; icon: string; color: string; position: number; autoRules: string | null }>) {
+  return db.update(dbCategories).set(data).where(eq(dbCategories.id, id)).run();
+}
+
+export function deleteDbCategory(id: number) {
+  const other = db.select().from(dbCategories).where(eq(dbCategories.name, 'Other')).get();
+  if (other && other.id !== id) {
+    db.update(repoCategories).set({ categoryId: other.id, isAuto: false }).where(eq(repoCategories.categoryId, id)).run();
+  } else {
+    db.delete(repoCategories).where(eq(repoCategories.categoryId, id)).run();
+  }
+  return db.delete(dbCategories).where(eq(dbCategories.id, id)).run();
+}
+
+// ---- Repo Category Assignment ----
+
+export function getRepoCategory(repoId: number) {
+  return db.select({ categoryId: repoCategories.categoryId, isAuto: repoCategories.isAuto })
+    .from(repoCategories)
+    .where(eq(repoCategories.repoId, repoId))
+    .get();
+}
+
+export function setRepoCategory(repoId: number, categoryId: number, isAuto: boolean) {
+  const existing = getRepoCategory(repoId);
+  if (existing) {
+    db.update(repoCategories)
+      .set({ categoryId, isAuto })
+      .where(eq(repoCategories.repoId, repoId))
+      .run();
+  } else {
+    db.insert(repoCategories).values({ repoId, categoryId, isAuto }).run();
+  }
+}
+
+export function getRepoCategoryCounts() {
+  return db.select({
+    categoryId: repoCategories.categoryId,
+    count: count(),
+  })
+  .from(repoCategories)
+  .innerJoin(starredRepos, and(eq(starredRepos.id, repoCategories.repoId), eq(starredRepos.unstarred, false)))
+  .groupBy(repoCategories.categoryId)
+  .all();
+}
+
+export function getReposByCategoryId(categoryId: number) {
+  return db.select({ repo: starredRepos })
+    .from(starredRepos)
+    .innerJoin(repoCategories, eq(repoCategories.repoId, starredRepos.id))
+    .where(and(eq(repoCategories.categoryId, categoryId), eq(starredRepos.unstarred, false)))
+    .all()
+    .map(r => r.repo);
 }
