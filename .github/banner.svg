@@ -1,0 +1,112 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="300" viewBox="0 0 900 300">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0d1117"/>
+      <stop offset="50%" style="stop-color:#161b22"/>
+      <stop offset="100%" style="stop-color:#0d1117"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#1f6feb"/>
+      <stop offset="50%" style="stop-color:#58a6ff"/>
+      <stop offset="100%" style="stop-color:#3fb950"/>
+    </linearGradient>
+    <linearGradient id="starGlow" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#f0883e;stop-opacity:0.6"/>
+      <stop offset="100%" style="stop-color:#f0883e;stop-opacity:0"/>
+    </linearGradient>
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="4" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <filter id="softGlow">
+      <feGaussianBlur stdDeviation="2" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="900" height="300" fill="url(#bg)" rx="12"/>
+
+  <!-- Grid pattern -->
+  <g opacity="0.04" stroke="#58a6ff" stroke-width="0.5">
+    <line x1="0" y1="60" x2="900" y2="60"/>
+    <line x1="0" y1="120" x2="900" y2="120"/>
+    <line x1="0" y1="180" x2="900" y2="180"/>
+    <line x1="0" y1="240" x2="900" y2="240"/>
+    <line x1="150" y1="0" x2="150" y2="300"/>
+    <line x1="300" y1="0" x2="300" y2="300"/>
+    <line x1="450" y1="0" x2="450" y2="300"/>
+    <line x1="600" y1="0" x2="600" y2="300"/>
+    <line x1="750" y1="0" x2="750" y2="300"/>
+  </g>
+
+  <!-- Decorative stars scattered -->
+  <g fill="#f0883e" opacity="0.3" filter="url(#softGlow)">
+    <polygon points="120,50 123,58 131,58 125,63 127,71 120,66 113,71 115,63 109,58 117,58" transform="scale(0.6)"/>
+    <polygon points="780,80 783,88 791,88 785,93 787,101 780,96 773,101 775,93 769,88 777,88" transform="scale(0.5)"/>
+    <polygon points="680,200 683,208 691,208 685,213 687,221 680,216 673,221 675,213 669,208 677,208" transform="scale(0.4)"/>
+    <polygon points="150,220 153,228 161,228 155,233 157,241 150,236 143,241 145,233 139,228 147,228" transform="scale(0.5)"/>
+    <polygon points="820,160 823,168 831,168 825,173 827,181 820,176 813,181 815,173 809,168 817,168" transform="scale(0.45)"/>
+  </g>
+
+  <!-- Connection lines (like a constellation) -->
+  <g stroke="#21262d" stroke-width="1" opacity="0.5">
+    <line x1="72" y1="30" x2="390" y2="40"/>
+    <line x1="390" y1="40" x2="340" y2="100"/>
+    <line x1="72" y1="30" x2="75" y2="110"/>
+    <line x1="820" y1="50" x2="780" y2="120"/>
+    <line x1="780" y1="120" x2="830" y2="180"/>
+  </g>
+
+  <!-- Accent line -->
+  <rect x="200" y="138" width="500" height="2" fill="url(#accent)" rx="1" opacity="0.3"/>
+
+  <!-- Main title -->
+  <text x="450" y="115" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="52" font-weight="800" fill="#f0f6fc" filter="url(#glow)">
+    StarDeck
+  </text>
+
+  <!-- Star icon next to title -->
+  <g transform="translate(318, 82)" fill="#f0883e" filter="url(#softGlow)">
+    <polygon points="16,0 20,12 33,12 23,19 26,31 16,24 6,31 9,19 -1,12 12,12"/>
+  </g>
+
+  <!-- Subtitle -->
+  <text x="450" y="165" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="18" fill="#8b949e">
+    Mission Control for Your GitHub Stars
+  </text>
+
+  <!-- Feature pills -->
+  <g font-family="system-ui, -apple-system, sans-serif" font-size="11" font-weight="600">
+    <!-- Pill 1 -->
+    <rect x="170" y="195" width="110" height="26" rx="13" fill="#1f6feb" opacity="0.15" stroke="#1f6feb" stroke-width="0.5" stroke-opacity="0.3"/>
+    <text x="225" y="212" text-anchor="middle" fill="#58a6ff">Workflow Stages</text>
+
+    <!-- Pill 2 -->
+    <rect x="295" y="195" width="100" height="26" rx="13" fill="#238636" opacity="0.15" stroke="#238636" stroke-width="0.5" stroke-opacity="0.3"/>
+    <text x="345" y="212" text-anchor="middle" fill="#3fb950">Dir Scanner</text>
+
+    <!-- Pill 3 -->
+    <rect x="410" y="195" width="115" height="26" rx="13" fill="#f0883e" opacity="0.15" stroke="#f0883e" stroke-width="0.5" stroke-opacity="0.3"/>
+    <text x="467" y="212" text-anchor="middle" fill="#f0883e">Version Tracking</text>
+
+    <!-- Pill 4 -->
+    <rect x="540" y="195" width="90" height="26" rx="13" fill="#d2a8ff" opacity="0.15" stroke="#d2a8ff" stroke-width="0.5" stroke-opacity="0.3"/>
+    <text x="585" y="212" text-anchor="middle" fill="#d2a8ff">Collections</text>
+
+    <!-- Pill 5 -->
+    <rect x="645" y="195" width="95" height="26" rx="13" fill="#58a6ff" opacity="0.15" stroke="#58a6ff" stroke-width="0.5" stroke-opacity="0.3"/>
+    <text x="692" y="212" text-anchor="middle" fill="#58a6ff">Watch Levels</text>
+  </g>
+
+  <!-- Bottom description -->
+  <text x="450" y="260" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="13" fill="#484f58">
+    Clone, update, run, and organize your starred repos from one dashboard.
+  </text>
+</svg>
